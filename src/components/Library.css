@@ -1,0 +1,286 @@
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    background: linear-gradient(
+      135deg,
+      #0f172a 0%,    /* Dark navy */
+      #1e3a8a 50%,   /* Rich blue */
+      #172554 100%   /* Deep blue */
+    );
+    background-attachment: fixed;
+    background-size: 200% 200%;
+    animation: gradientShift 15s ease infinite;
+    color: #F5F5DC;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+  
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.upload-section {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    padding: 3rem 2rem;
+    text-align: center;
+}
+.upload-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.upload-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.upload-title {
+    color: #F5F5DC;
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.upload-text {
+    color: #F5F5DC;
+    opacity: 0.8;
+    margin-bottom: 2rem;
+}
+
+.upload-btn {
+    background: #4A4E69;
+    color: #F5F5DC;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform 0.2s;
+}
+
+.books-section {
+    padding: 2rem;
+}
+
+.section-title {
+    color: #F5F5DC;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
+}
+
+.upload-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.upload-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.upload-box {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    max-width: 400px;
+    width: 90%;
+    transform: scale(1);
+    transition: transform 0.2s ease;
+}
+
+.upload-box:hover {
+    transform: scale(1.02);
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: #667eea;
+    margin-bottom: 20px;
+}
+
+.upload-text {
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.file-input {
+    display: none;
+}
+
+.upload-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.upload-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.library-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+  
+.empty-library {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #F5F5DC;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.books-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 2rem;
+    padding: 1rem;
+}
+  
+.book-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative; /* Add relative positioning */
+}
+
+.book-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.book-card:hover .book-description {
+    white-space: normal; /* Allow multiline text */
+    overflow: visible; /* Ensure full text is visible */
+    max-height: none; /* Remove height restriction */
+    background: rgba(255, 255, 255, 0.1); /* Match card background color */
+    padding: 10px;
+    border-radius: 8px;
+    color: #F5F5DC; /* Ensure text is readable */
+    transition: all 0.3s ease; /* Smooth transition */
+}
+
+.book-cover {
+    width: 100%;
+    height: 300px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #4A4E69;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+  
+.book-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.default-cover {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+  
+.book-icon {
+    font-size: 3rem;
+    color: #F5F5DC;
+}
+
+.book-title {
+    color: #F5F5DC;
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.book-author {
+    color: #F5F5DC;
+    opacity: 0.8;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+}
+
+.book-description {
+    white-space: nowrap; /* Default: single line */
+    overflow: hidden; /* Hide overflow text */
+    text-overflow: ellipsis; /* Add ellipsis for truncated text */
+    max-height: 1.5em; /* Restrict height */
+    transition: all 0.3s ease; /* Smooth transition */
+}
+
+.book-meta {
+    margin-top: 1rem;
+    color: #F5F5DC;
+    opacity: 0.6;
+}
+
+.primary-btn {
+    background: #4A4E69;
+    color: #F5F5DC;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: transform 0.2s;
+}
+
+.primary-btn:hover {
+    transform: translateY(-2px);
+}
+
+.delete-btn {
+    background: linear-gradient(135deg, #667eea, #764ba2); /* Match upload button color */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    position: absolute; /* Position the button absolutely */
+    bottom: 10px; /* Align to the bottom */
+    right: 10px; /* Align to the right */
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.delete-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 10px rgba(102, 126, 234, 0.3); /* Match hover effect */
+}
+
+@media (max-width: 768px) {
+    .books-grid {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+}
