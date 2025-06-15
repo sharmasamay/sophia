@@ -168,7 +168,10 @@ body {
     padding: 1rem;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s;
-    position: relative; /* Add relative positioning */
+    position: relative; /* Ensure absolute positioning works */
+    display: flex;
+    flex-direction: column; /* Ensure vertical layout */
+    justify-content: space-between; /* Space out elements */
 }
 
 .book-card:hover {
@@ -185,6 +188,59 @@ body {
     border-radius: 8px;
     color: #F5F5DC; /* Ensure text is readable */
     transition: all 0.3s ease; /* Smooth transition */
+}
+
+.book-card-menu {
+    position: absolute;
+    top: 10px; /* Align to the top */
+    right: 10px; /* Align to the right */
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 8px;
+    padding: 5px;
+    display: none; /* Hidden by default */
+    flex-direction: column;
+    z-index: 10;
+}
+
+.book-card-menu.show {
+    display: flex; /* Show menu when active */
+}
+
+.book-card-menu button {
+    background: none;
+    border: none;
+    color: #F5F5DC;
+    padding: 8px 12px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease;
+}
+
+.book-card-menu button:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.menu-toggle-btn {
+    position: absolute;
+    top: 15px; /* Add more space from the top */
+    right: 15px; /* Add more space from the right */
+    background: none;
+    border: none;
+    color: #F5F5DC;
+    font-size: 1.2rem;
+    cursor: pointer;
+    z-index: 11; /* Ensure it appears above other elements */
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    opacity: 0; /* Hidden by default */
+}
+
+.book-card:hover .menu-toggle-btn {
+    opacity: 1; /* Show button on hover */
+}
+
+.menu-toggle-btn:hover {
+    transform: scale(1.2); /* Slightly enlarge on hover */
 }
 
 .book-cover {
@@ -220,14 +276,16 @@ body {
 .book-title {
     color: #F5F5DC;
     font-size: 1.2rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.3rem;
+    margin-top: 1rem;
 }
 
 .book-author {
     color: #F5F5DC;
     opacity: 0.8;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.5rem; /* Reduce gap */
     font-size: 1rem;
+    text-align: center; /* Center the author name */
 }
 
 .book-description {
@@ -276,6 +334,34 @@ body {
 .delete-btn:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 10px rgba(102, 126, 234, 0.3); /* Match hover effect */
+}
+
+.completion-bar {
+    position: absolute; /* Position at the very bottom */
+    bottom: 0; /* Align to the bottom edge */
+    left: 0; /* Align to the left edge */
+    width: 100%; /* Full width */
+    height: 8px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 0 0 12px 12px; /* Match card border radius */
+    overflow: hidden;
+    z-index: 1; /* Ensure it appears above the card background */
+    margin-top: 0; /* Remove any extra margin */
+}
+
+.completion-bar-fill {
+    height: 100%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    width: 0%; /* Default width */
+    transition: width 0.3s ease;
+}
+
+.completion-percentage {
+    font-size: 0.9rem;
+    color: #F5F5DC;
+    opacity: 0.8;
+    margin-top: 0.3rem;
+    text-align: right;
 }
 
 @media (max-width: 768px) {

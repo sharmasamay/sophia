@@ -167,3 +167,48 @@ export const clearAllBooksFromDb = async () => {
         };
     });
 };
+
+/**
+ * Updates a book's last read page and completion progress in the IndexedDB.
+ * @param {string} bookId - The ID of the book to update.
+ * @param {number} lastReadPage - The last read page index.
+ * @param {number} totalPages - The total number of pages in the book.
+ * @returns {Promise<void>} A promise that resolves when the book is successfully updated.
+ */
+export const updateBookProgress = async (bookId, lastReadPage, totalPages) => {
+    const dbInstance = await initDb(); // Ensure DB is initialized.
+    return new Promise((resolve, reject) => {
+        const transaction = dbInstance.transaction([STORE_BOOKS], 'readwrite');
+        const store = transaction.objectStore(STORE_BOOKS);
+
+        // Get the book by its ID.
+        const request = store.get(bookId);
+
+        request.onsuccess = () => {
+            const book = request.result;
+            if (book) {
+                book.lastReadPage = lastReadPage;
+                book.totalPages = totalPages;
+                book.completion = Math.floor((lastReadPage / totalPages) * 100); // Calculate completion percentage.
+
+                // Update the book in the store.
+                const updateRequest = store.put(book);
+                updateRequest.onsuccess = () => {
+                    console.log(`Book progress updated: ${book.title}`);
+                    resolve();
+                };
+                updateRequest.onerror = (event) => {
+                    console.error('Error updating book progress:', event.target.error);
+                    reject(event.target.error);
+                };
+            } else {
+                reject(new Error(`Book with ID ${bookId} not found.`));
+            }
+        };
+
+        request.onerror = (event) => {
+            console.error(`Error retrieving book with ID ${bookId}:`, event.target.error);
+            reject(event.target.error);
+        };
+    });
+};

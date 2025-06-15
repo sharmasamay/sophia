@@ -8,6 +8,7 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
   const [books, setBooks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadOverlay, setShowUploadOverlay] = useState(false);
+  const [activeMenu, setActiveMenu] = useState(null); // Track active menu
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -22,25 +23,6 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
       console.error('Error loading books:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const extractBookTitle = async (zip, opfPath) => {
-    try {
-      const opfContent = await zip.files[opfPath].async('text');
-      const parser = new DOMParser();
-      const opfDoc = parser.parseFromString(opfContent, 'application/xml');
-      
-      const titleElement = 
-        opfDoc.querySelector('metadata dc\\:title') || 
-        opfDoc.querySelector('metadata title') ||
-        opfDoc.querySelector('dc\\:title') || 
-        opfDoc.querySelector('title');
-
-      return titleElement ? titleElement.textContent.trim() : null;
-    } catch (error) {
-      console.error('Error extracting title:', error);
-      return null;
     }
   };
 
@@ -133,82 +115,29 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
     return metadata;
   };
 
-  const extractCoverImage = async (zip, opfPath) => {
-    try {
-      const opfContent = await zip.files[opfPath].async('text');
-      const parser = new DOMParser();
-      const opfDoc = parser.parseFromString(opfContent, 'text/xml');
-      
-      // Try different methods to find cover
-      const manifestItems = opfDoc.querySelectorAll('manifest item');
-      let coverPath;
-  
-      // Method 1: Look for cover in manifest
-      for (const item of manifestItems) {
-        const id = item.getAttribute('id');
-        const href = item.getAttribute('href');
-        if (id?.includes('cover') || href?.includes('cover')) {
-          coverPath = href;
-          break;
-        }
-      }
-  
-      // Method 2: Look for meta cover
-      if (!coverPath) {
-        const metaCover = opfDoc.querySelector('meta[name="cover"]');
-        if (metaCover) {
-          const coverId = metaCover.getAttribute('content');
-          const coverItem = opfDoc.querySelector(`item[id="${coverId}"]`);
-          if (coverItem) {
-            coverPath = coverItem.getAttribute('href');
-          }
-        }
-      }
-  
-      if (coverPath) {
-        const basePath = opfPath.substring(0, opfPath.lastIndexOf('/') + 1);
-        const fullPath = basePath + coverPath;
-        
-        if (zip.files[fullPath]) {
-          const imageBlob = await zip.files[fullPath].async('blob');
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
-            reader.readAsDataURL(imageBlob);
-          });
-        }
-      }
-      return null;
-    } catch (error) {
-      console.error('Error extracting cover:', error);
-      return null;
-    }
-  };
-
   const handleBookClick = async (book) => {
     try {
-      // Get specific book using modified getBooksFromDb
       const books = await getBooksFromDb();
       const bookData = books.find(b => b.id === book.id);
-      
+
       if (!bookData || !bookData.fileData) {
         throw new Error('Book data not found');
       }
-  
-      // Convert ArrayBuffer to Blob then to ArrayBuffer again
+
       const blob = new Blob([bookData.fileData]);
       const arrayBuffer = await blob.arrayBuffer();
-  
+
       onBookSelect({
         ...bookData,
-        fileData: arrayBuffer
+        fileData: arrayBuffer,
+        totalPages: Math.ceil(bookData.fileData.length / 250) // Calculate total pages
       });
     } catch (error) {
       console.error('Error loading book:', error);
       alert('Error loading book. Please try again.');
     }
   };
-  
+
   const handleFile = async (event) => {
     const file = event.target.files[0];
     if (file && file.name.endsWith('.epub')) {
@@ -269,8 +198,21 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
   const sanitizeDescription = (description) => {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = description;
-    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    let textContent = tempDiv.textContent || tempDiv.innerText || '';
+    textContent = textContent.replace(/(SUMMARY|Synopsis)\s*:/i, '').trim();
     return textContent;
+  };
+
+  const calculateCompletionPercentage = (book) => {
+    return book.completion || 0; // Use the saved completion percentage
+  };
+
+  const toggleMenu = (bookId) => {
+    setActiveMenu(activeMenu === bookId ? null : bookId); // Toggle menu visibility
+  };
+
+  const handleViewDescription = (description) => {
+    alert(description || 'No description available.');
   };
 
   if (isLoading) {
@@ -327,15 +269,36 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
             </div>
             <div className="book-info">
               <h3 className="book-title">{book.title}</h3>
-              <p className="book-author">Author: {book.author || 'Unknown Author'}</p>
-              <p className="book-description">{sanitizeDescription(book.description || 'No description available.')}</p>
-              <p className="book-meta">Added: {new Date(book.dateAdded).toLocaleDateString()}</p>
+              <p className="book-author">{book.author || 'Unknown Author'}</p>
+            </div>
+            <div className="completion-bar">
+              <div 
+                className="completion-bar-fill" 
+                style={{ width: `${calculateCompletionPercentage(book)}%` }}
+              ></div>
+            </div>
+            <p className="completion-percentage">
+              {calculateCompletionPercentage(book)}% completed
+            </p>
+            <div 
+              className={`book-card-menu ${activeMenu === book.id ? 'show' : ''}`}
+              onClick={(e) => e.stopPropagation()} // Prevent card click
+            >
+              <button onClick={() => handleViewDescription(book.description)}>
+                View Description
+              </button>
+              <button onClick={(event) => handleDeleteBook(book.id, event)}>
+                Delete Book
+              </button>
             </div>
             <button 
-              className="delete-btn" 
-              onClick={(event) => handleDeleteBook(book.id, event)}
+              className="menu-toggle-btn" 
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent card click
+                toggleMenu(book.id);
+              }}
             >
-              Delete
+              ⋮
             </button>
           </div>
         ))}

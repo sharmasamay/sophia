@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Library from './components/Library';
-import { initDb, addBookToDb, getBooksFromDb, getBookContentFromDb, deleteBookFromDb } from './db/indexedDB.js';
+import { initDb, addBookToDb, getBooksFromDb, getBookContentFromDb, deleteBookFromDb, updateBookProgress } from './db/indexedDB.js'; // Import the new function
 const JSZip = window.JSZip;
 
 function App() {
@@ -24,8 +24,28 @@ function App() {
   const [dbError, setDbError] = useState(null);
   const [books, setBooks] = useState([]);
   const [view, setView] = useState('library'); // 'library' or 'reader'
+  const [isDarkMode, setIsDarkMode] = useState(false); // Track mode
   
   const fileInputRef = useRef(null);
+
+  const saveLastReadPage = async (bookId, pageIndex, totalPages) => {
+    try {
+      await updateBookProgress(bookId, pageIndex, totalPages); // Save progress in IndexedDB
+    } catch (error) {
+      console.error('Error saving last read page:', error);
+    }
+  };
+
+  const getLastReadPage = async (bookId) => {
+    try {
+      const books = await getBooksFromDb();
+      const book = books.find(b => b.id === bookId);
+      return book ? book.lastReadPage || 0 : 0; // Default to page 0 if not found
+    } catch (error) {
+      console.error('Error retrieving last read page:', error);
+      return 0;
+    }
+  };
 
   const extractBookTitle = async (zip, opfPath) => {
     try {
@@ -128,23 +148,24 @@ function App() {
               const content = await zip.files[fullPath].async('text');
               const tempDiv = document.createElement('div');
               tempDiv.innerHTML = content;
-              
-              // Extract title from h1, h2, or title tags
-              let chapterTitle = `Chapter ${i + 1}`;
-              const titleElements = tempDiv.querySelectorAll('h1, h2, h3, title');
-              if (titleElements.length > 0) {
-                chapterTitle = titleElements[0].textContent.trim() || chapterTitle;
+
+              // Replace image references with base64 data
+              const images = tempDiv.querySelectorAll('img');
+              for (const img of images) {
+                const src = img.getAttribute('src');
+                const imagePath = basePath + src;
+                if (zip.files[imagePath]) {
+                  const imageData = await zip.files[imagePath].async('base64');
+                  img.setAttribute('src', `data:image/*;base64,${imageData}`);
+                }
               }
 
-              const textContent = tempDiv.textContent || tempDiv.innerText || '';
-              if (textContent.trim()) {
-                chapters.push({
-                  id: i,
-                  title: chapterTitle,
-                  content: textContent.trim(),
-                  href: href
-                });
-              }
+              chapters.push({
+                id: i,
+                title: `Chapter ${i + 1}`,
+                content: tempDiv.innerHTML.trim(), // Preserve original HTML with images
+                href: href
+              });
             }
           }
         }
@@ -153,36 +174,61 @@ function App() {
       }
     }
 
-    // Fallback: extract content from HTML/XHTML files if no proper structure found
-    if (chapters.length === 0) {
-      let chapterIndex = 0;
-      for (const filename in zip.files) {
-        if (filename.endsWith('.html') || filename.endsWith('.xhtml')) {
-          const content = await zip.files[filename].async('text');
-          const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = content;
-          
-          let chapterTitle = `Chapter ${chapterIndex + 1}`;
-          const titleElements = tempDiv.querySelectorAll('h1, h2, h3, title');
-          if (titleElements.length > 0) {
-            chapterTitle = titleElements[0].textContent.trim() || chapterTitle;
-          }
+    const wordsPerPage = 300; // Limit to 250 words per page
+    const newBookContent = [];
+    const chapterPages = [];
+    let currentPageIndex = 0;
 
-          const textContent = tempDiv.textContent || tempDiv.innerText || '';
-          if (textContent.trim()) {
-            chapters.push({
-              id: chapterIndex,
-              title: chapterTitle,
-              content: textContent.trim(),
-              href: filename
-            });
-            chapterIndex++;
-          }
+    chapters.forEach((chapter, chapterIndex) => {
+      const chapterWords = chapter.content.split(/\s+/); // Split content into words
+      let pageContent = '';
+
+      for (let i = 0; i < chapterWords.length; i++) {
+        pageContent += `${chapterWords[i]} `;
+        if ((i + 1) % wordsPerPage === 0 || i === chapterWords.length - 1) {
+          newBookContent.push(pageContent.trim());
+          pageContent = '';
+          currentPageIndex++;
         }
       }
+
+      chapterPages.push({
+        ...chapter,
+        startPage: currentPageIndex - Math.ceil(chapterWords.length / wordsPerPage),
+        endPage: currentPageIndex - 1
+      });
+    });
+
+    return { chapters: chapterPages, toc, bookContent: newBookContent };
+  };
+
+  const getCurrentChapterTitle = () => {
+    const currentChapter = chapters.find(
+      (chapter) =>
+        currentPageIndex >= chapter.startPage && currentPageIndex <= chapter.endPage
+    );
+
+    if (currentChapter) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = currentChapter.content;
+
+      // Look for headings (h1, h2, h3, etc.) in the current chapter's content
+      const heading = tempDiv.querySelector('h1, h2, h3, h4, h5, h6');
+      const rawTitle = heading ? heading.textContent.trim() : currentChapter.title;
+
+      // Ensure proper formatting by adding a space between concatenated elements
+      return rawTitle.replace(/([a-z])([A-Z])/g, '$1 $2');
     }
 
-    return { chapters, toc };
+    return 'Unknown Chapter';
+  };
+
+  const getLeftPageChapterTitle = () => {
+    const currentChapter = chapters.find(
+      (chapter) =>
+        currentPageIndex >= chapter.startPage && currentPageIndex <= chapter.endPage
+    );
+    return currentChapter ? currentChapter.title : 'Unknown Chapter';
   };
 
   // File handling
@@ -201,73 +247,11 @@ function App() {
       setBookTitle(bookTitleText);
       
       // Parse EPUB content and structure
-      const { chapters: parsedChapters, toc: parsedToc } = await parseEpubContent(contents);
+      const { chapters: parsedChapters, toc: parsedToc, bookContent: newBookContent } = await parseEpubContent(contents);
       
-      // Create pages from chapters
-      const wordsPerPage = 300;
-      const newBookContent = [];
-      const chapterPages = [];
-      let currentPageIndex = 0;
-
-      parsedChapters.forEach((chapter, chapterIndex) => {
-        // Mark the start page for this chapter
-        const chapterStartPage = currentPageIndex;
-        
-        // Add chapter heading as first page of chapter
-        const chapterHeader = `\n\n--- ${chapter.title} ---\n\n`;
-        
-        // Split chapter content into words
-        const chapterWords = chapter.content.split(' ');
-        const chapterWordChunks = [];
-        
-        // First page gets the chapter header plus some content
-        const firstPageWords = chapterWords.slice(0, wordsPerPage - 20); // Reserve space for header
-        chapterWordChunks.push(chapterHeader + firstPageWords.join(' '));
-        
-        // Remaining content
-        for (let i = wordsPerPage - 20; i < chapterWords.length; i += wordsPerPage) {
-          chapterWordChunks.push(chapterWords.slice(i, i + wordsPerPage).join(' '));
-        }
-
-        // Add chapter pages to book content
-        chapterWordChunks.forEach(chunk => {
-          newBookContent.push(chunk);
-          currentPageIndex++;
-        });
-
-        // Update TOC with page numbers
-        if (parsedToc.length > 0) {
-          const tocItem = parsedToc.find(item => item.href === chapter.href);
-          if (tocItem) {
-            tocItem.pageIndex = chapterStartPage;
-          }
-        }
-
-        chapterPages.push({
-          ...chapter,
-          startPage: chapterStartPage,
-          endPage: currentPageIndex - 1
-        });
-      });
-
-      // If no TOC was found in the EPUB, create one from chapters
-      let finalToc = parsedToc;
-      if (finalToc.length === 0) {
-        finalToc = chapterPages.map(chapter => ({
-          id: chapter.id,
-          title: chapter.title,
-          href: chapter.href,
-          pageIndex: chapter.startPage
-        }));
-      }
-
-      if (newBookContent.length === 0) {
-        newBookContent.push('Content could not be extracted from this EPUB file.');
-      }
-
       setBookContent(newBookContent);
-      setChapters(chapterPages);
-      setTableOfContents(finalToc);
+      setChapters(parsedChapters);
+      setTableOfContents(parsedToc);
       setCurrentPageIndex(0);
       
       // Hide upload overlay and show reader
@@ -280,7 +264,7 @@ function App() {
       // Update book info in panel
       setBookInfo(`
         Title: ${bookTitleText}
-        Chapters: ${chapterPages.length}
+        Chapters: ${parsedChapters.length}
         Pages: ${Math.ceil(newBookContent.length / 2)}
         File Size: ${(file.size / 1024).toFixed(1)} KB
       `);
@@ -298,13 +282,17 @@ function App() {
 
   const nextPage = () => {
     if (currentPageIndex < bookContent.length - 2) {
-      setCurrentPageIndex(currentPageIndex + 2);
+      const newPageIndex = currentPageIndex + 2;
+      setCurrentPageIndex(newPageIndex);
+      saveLastReadPage(currentBook.id, newPageIndex, Math.ceil(bookContent.length / 2)); // Save progress
     }
   };
 
   const previousPage = () => {
     if (currentPageIndex > 0) {
-      setCurrentPageIndex(currentPageIndex - 2);
+      const newPageIndex = currentPageIndex - 2;
+      setCurrentPageIndex(newPageIndex);
+      saveLastReadPage(currentBook.id, newPageIndex, Math.ceil(bookContent.length / 2)); // Save progress
     }
   };
 
@@ -335,6 +323,10 @@ function App() {
   const jumpToChapter = (pageIndex) => {
     setCurrentPageIndex(pageIndex);
     setIsTocOpen(false); // Close TOC after selection
+  };
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
   };
 
   useEffect(() => {
@@ -393,13 +385,16 @@ function App() {
     try {
       const zip = new JSZip();
       const contents = await zip.loadAsync(book.fileData);
-      const { chapters, toc } = await parseEpubContent(contents);
-      
+      const { chapters, toc, bookContent } = await parseEpubContent(contents);
+
+      const lastReadPage = await getLastReadPage(book.id); // Retrieve last read page
+
       setCurrentBook(book);
-      setBookContent(chapters.map(ch => ch.content));
+      setBookContent(bookContent);
       setChapters(chapters);
       setTableOfContents(toc);
       setBookTitle(book.title);
+      setCurrentPageIndex(lastReadPage); // Open at last read page
       setView('reader');
       setShowReader(true);
     } catch (error) {
@@ -426,30 +421,36 @@ function App() {
 
   return (
     <div className="app-container">
-      <header className="app-header">
-        <button 
-          className="back-button" 
-          onClick={handleBackToLibrary}
-          style={{visibility: view === 'reader' ? 'visible' : 'hidden'}}
-        >
-          ←
-        </button>
-        <h1 className="app-name">Sophia</h1>
-      </header>
       {view === 'library' ? (
         <Library 
           onBookSelect={handleBookSelect}
           onNewBookUpload={handleNewBookUpload}
         />
       ) : (
-      <div className={`reader-container ${showReader ? 'visible' : ''}`} id="readerContainer">
+      <div className={`reader-container ${showReader ? 'visible' : ''} ${isDarkMode ? 'dark-mode' : 'light-mode'}`} id="readerContainer">
         <div className="reader-header">
-          <h1 className="book-title" id="bookTitle">{bookTitle}</h1>
+          <button 
+            className="back-button" 
+            onClick={handleBackToLibrary}
+          >
+            ←
+          </button>
+          <div>
+            <h1 className="book-title" id="bookTitle">{bookTitle}</h1>
+            <p className="chapter-title" id="chapterTitle">{getCurrentChapterTitle()}</p>
+          </div>
+          <button 
+            className="nav-btn" 
+            onClick={toggleDarkMode}
+            style={{ background: isDarkMode ? '#F5F5DC' : '#333', color: isDarkMode ? '#333' : '#F5F5DC' }}
+          >
+            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+          </button>
         </div>
         <div className="pages-container">
-          <div className="page" id="leftPage">
+          <div className={`page ${isDarkMode ? 'dark-mode' : 'light-mode'}`} id="leftPage">
             {bookContent.length > 0 ? (
-              bookContent[currentPageIndex] || ''
+              <div dangerouslySetInnerHTML={{ __html: bookContent[currentPageIndex] || '' }} />
             ) : (
               <div className="loading">
                 <div className="spinner"></div>
@@ -457,9 +458,9 @@ function App() {
               </div>
             )}
           </div>
-          <div className="page" id="rightPage">
+          <div className={`page ${isDarkMode ? 'dark-mode' : 'light-mode'}`} id="rightPage">
             {bookContent.length > 0 ? (
-              bookContent[currentPageIndex + 1] || ''
+              <div dangerouslySetInnerHTML={{ __html: bookContent[currentPageIndex + 1] || '' }} />
             ) : (
               <div className="loading">
                 <div className="spinner"></div>

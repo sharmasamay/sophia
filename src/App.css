@@ -11,13 +11,7 @@ body {
 }
 
 .app-header {
-  background: #4A4E69;
-  padding: 15px 20px;
-  display: flex;
-  align-items: center;
-  position: relative;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  z-index: 1001; /* Above upload overlay */
+  display: none; /* Hide the header */
 }
 
 .back-button {
@@ -28,8 +22,6 @@ body {
   cursor: pointer;
   padding: 5px;
   transition: transform 0.2s;
-  position: absolute;
-  left: 20px;
 }
 
 .back-button:hover {
@@ -172,8 +164,21 @@ body {
   transform: translateY(0);
 }
 
+.reader-container.light-mode {
+  background: #ffffff; /* Light background */
+  color: #333; /* Dark text */
+}
+
+.reader-container.dark-mode {
+  background: #333; /* Dark background */
+  color: #ffffff; /* Light text */
+}
+
 /* Header */
 .reader-header {
+  display: flex; /* Use flexbox for alignment */
+  align-items: center; /* Center items vertically */
+  justify-content: space-between; /* Space out items */
   padding: 20px 30px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   text-align: center;
@@ -181,10 +186,21 @@ body {
 }
 
 .book-title {
+  flex: 1; /* Allow title to take up remaining space */
   font-size: 18px;
   font-weight: 450;
   color: #F5F5DC;
   margin: 0;
+  text-align: center; /* Center the title */
+}
+
+.chapter-title {
+  font-size: 16px; /* Slightly larger for better readability */
+  font-weight: 500; /* Make it slightly bolder */
+  color: #F5F5DC; /* Match the book title color */
+  margin-top: 8px; /* Add spacing below the book title */
+  text-align: center; /* Center align the chapter title */
+  text-transform: capitalize; /* Ensure consistent formatting */
 }
 
 /* Pages Container */
@@ -208,6 +224,16 @@ body {
   color: #333;
   user-select: text;
   cursor: text;
+}
+
+.page.light-mode {
+  background: #ffffff; /* Light background */
+  color: #333; /* Dark text */
+}
+
+.page.dark-mode {
+  background: #333; /* Dark background */
+  color: #ffffff; /* Light text */
 }
 
 .page::-webkit-scrollbar {
@@ -364,8 +390,13 @@ body {
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
   z-index: 150;
   transition: transform 0.2s ease, left 0.3s ease;
-  opacity: 0;
-  font-size: 18px;
+  opacity: 0; /* Hidden by default */
+  visibility: hidden; /* Ensure it doesn't take up space */
+}
+
+.reader-container.visible ~ .toc-toggle {
+  opacity: 1; /* Show when reading window is visible */
+  visibility: visible;
 }
 
 .toc-toggle.visible {
@@ -423,7 +454,13 @@ body {
   box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
   z-index: 150;
   transition: transform 0.2s ease, right 0.3s ease;
-  opacity: 0;
+  opacity: 0; /* Hidden by default */
+  visibility: hidden; /* Ensure it doesn't take up space */
+}
+
+.reader-container.visible ~ .panel-toggle {
+  opacity: 1; /* Show when reading window is visible */
+  visibility: visible;
 }
 
 .panel-toggle.visible {
