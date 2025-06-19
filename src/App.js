@@ -15,6 +15,9 @@ function App() {
   const [bookTitle, setBookTitle] = useState('Select a book to start reading');
   const [bookInfo, setBookInfo] = useState('No book loaded');
   const [selectedText, setSelectedText] = useState('Select text from the book to see it here');
+  const [selectedWord, setSelectedWord] = useState('');
+  const [wordDefinition, setWordDefinition] = useState('Select a single word to see its definition');
+  const [isLoadingDefinition, setIsLoadingDefinition] = useState(false);
   const [showUploadOverlay, setShowUploadOverlay] = useState(true);
   const [showReader, setShowReader] = useState(false);
   const [showPlusBtn, setShowPlusBtn] = useState(false);
@@ -341,14 +344,63 @@ function App() {
       });
   }, []);
 
+  // Function to fetch word definition from Flask API
+  const fetchWordDefinition = async (word) => {
+    setIsLoadingDefinition(true);
+    try {
+      const response = await fetch(`http://localhost:5000/api/definition?word=${encodeURIComponent(word)}`);
+      const data = await response.json();
+      
+      if (data.error) {
+        return `Word "${word}" not found in dictionary.`;
+      }
+      
+      // Format the definition response
+      let formattedDefinition = `**${data.word}**\n\n`;
+      
+      data.meanings.forEach((meaning, index) => {
+        formattedDefinition += `**${meaning.partOfSpeech}:**\n`;
+        meaning.definitions.forEach((def, defIndex) => {
+          formattedDefinition += `${defIndex + 1}. ${def.definition}\n`;
+          if (def.example) {
+            formattedDefinition += `   Example: "${def.example}"\n`;
+          }
+        });
+        if (index < data.meanings.length - 1) {
+          formattedDefinition += '\n';
+        }
+      });
+      
+      return formattedDefinition;
+    } catch (error) {
+      console.error('Error fetching definition:', error);
+      return `Error fetching definition for "${word}". Make sure the Flask server is running.`;
+    } finally {
+      setIsLoadingDefinition(false);
+    }
+  };
+
   // Text selection handling
   useEffect(() => {
-    const handleMouseUp = () => {
+    const handleMouseUp = async () => {
       const selection = window.getSelection();
       const selectedTextContent = selection.toString().trim();
       
       if (selectedTextContent) {
         setSelectedText(selectedTextContent);
+        
+        // Check if it's a single word (no spaces)
+        const words = selectedTextContent.split(/\s+/);
+        if (words.length === 1 && words[0].length > 0) {
+          const cleanWord = words[0].replace(/[^\w]/g, '').toLowerCase(); // Remove punctuation
+          setSelectedWord(cleanWord);
+          setWordDefinition('Loading definition...');
+          const definition = await fetchWordDefinition(cleanWord);
+          setWordDefinition(definition);
+        } else {
+          setSelectedWord('');
+          setWordDefinition('Select a single word to see its definition');
+        }
       }
     };
 
@@ -543,36 +595,81 @@ function App() {
       <div className={`sliding-panel ${isPanelOpen ? 'open' : ''}`} id="slidingPanel">
         <div className="panel-header">Reading Panel</div>
         <div>
-          <p>Book Information:</p>
-          <div id="bookInfo" style={{marginTop: '10px', color: '#666'}}>
+          <p style={{color: '#333', fontWeight: '600', fontSize: '1rem'}}>Book Information:</p>
+          <div 
+            id="bookInfo" 
+            style={{
+              marginTop: '10px', 
+              color: '#555',
+              background: 'rgba(102, 126, 234, 0.05)',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid rgba(102, 126, 234, 0.1)'
+            }}
+          >
             {bookInfo.split('\n').map((line, index) => (
               <React.Fragment key={index}>
                 {line.includes(':') ? (
                   <>
-                    <strong>{line.split(':')[0]}:</strong> {line.split(':')[1]}
+                    <strong style={{color: '#667eea'}}>{line.split(':')[0]}:</strong> 
+                    <span style={{color: '#333'}}>{line.split(':')[1]}</span>
                   </>
                 ) : (
-                  line
+                  <span style={{color: '#333'}}>{line}</span>
                 )}
                 {index < bookInfo.split('\n').length - 1 && <br />}
               </React.Fragment>
             ))}
           </div>
           <br />
-          <p>Selected Text:</p>
+          <p style={{color: '#333', fontWeight: '600', fontSize: '1rem'}}>Selected Text:</p>
           <div 
             id="selectedText" 
             style={{
               marginTop: '10px', 
-              padding: '10px', 
-              background: 'rgba(102, 126, 234, 0.1)', 
+              padding: '12px', 
+              background: 'rgba(102, 126, 234, 0.08)', 
               borderRadius: '8px', 
               fontStyle: 'italic', 
-              minHeight: '40px'
+              minHeight: '50px',
+              color: '#444',
+              border: '1px solid rgba(102, 126, 234, 0.2)',
+              fontSize: '0.95rem'
             }}
           >
             {selectedText}
           </div>
+          {selectedWord && (
+            <>
+              <br />
+              <p style={{color: '#333', fontWeight: '600', fontSize: '1rem'}}>Word Definition and Usage:</p>
+              <div 
+                id="wordDefinition" 
+                style={{
+                  marginTop: '10px', 
+                  padding: '12px', 
+                  background: 'rgba(118, 75, 162, 0.08)', 
+                  borderRadius: '8px', 
+                  fontStyle: 'normal', 
+                  minHeight: '50px',
+                  fontSize: '0.9rem',
+                  color: '#444',
+                  border: '1px solid rgba(118, 75, 162, 0.2)',
+                  whiteSpace: 'pre-line', // Preserve line breaks
+                  fontFamily: 'inherit'
+                }}
+              >
+                {isLoadingDefinition ? (
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <div className="spinner" style={{width: '16px', height: '16px'}}></div>
+                    Loading definition...
+                  </div>
+                ) : (
+                  wordDefinition
+                )}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
