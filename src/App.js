@@ -8,6 +8,7 @@ function App() {
   const [currentBook, setCurrentBook] = useState(null);
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [bookContent, setBookContent] = useState([]);
+  const [bookContentChunks, setBookContentChunks] = useState([]); // New state for chunk storage
   const [chapters, setChapters] = useState([]);
   const [tableOfContents, setTableOfContents] = useState([]);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -17,7 +18,9 @@ function App() {
   const [selectedText, setSelectedText] = useState('Select text from the book to see it here');
   const [selectedWord, setSelectedWord] = useState('');
   const [wordDefinition, setWordDefinition] = useState('Select a single word to see its definition');
+  const [textExplanation, setTextExplanation] = useState('Select multiple words to see an explanation');
   const [isLoadingDefinition, setIsLoadingDefinition] = useState(false);
+  const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [showUploadOverlay, setShowUploadOverlay] = useState(true);
   const [showReader, setShowReader] = useState(false);
   const [showPlusBtn, setShowPlusBtn] = useState(false);
@@ -177,32 +180,61 @@ function App() {
       }
     }
 
-    const wordsPerPage = 300; // Limit to 250 words per page
+    const wordsPerPage = 300; // Words per page for current display method
+    const chunkSize = 1000; // Words per chunk for storage
     const newBookContent = [];
+    const newBookContentChunks = []; // New chunks array
     const chapterPages = [];
     let currentPageIndex = 0;
 
     chapters.forEach((chapter, chapterIndex) => {
       const chapterWords = chapter.content.split(/\s+/); // Split content into words
       let pageContent = '';
+      let chunkContent = '';
+      let chunkWordCount = 0;
 
       for (let i = 0; i < chapterWords.length; i++) {
-        pageContent += `${chapterWords[i]} `;
+        const word = chapterWords[i];
+        pageContent += `${word} `;
+        chunkContent += `${word} `;
+        chunkWordCount++;
+
+        // Create page chunks for current display method
         if ((i + 1) % wordsPerPage === 0 || i === chapterWords.length - 1) {
           newBookContent.push(pageContent.trim());
           pageContent = '';
           currentPageIndex++;
+        }
+
+        // Create storage chunks
+        if (chunkWordCount >= chunkSize || i === chapterWords.length - 1) {
+          newBookContentChunks.push({
+            id: newBookContentChunks.length,
+            chapterIndex: chapterIndex,
+            content: chunkContent.trim(),
+            wordCount: chunkWordCount,
+            startWordIndex: i - chunkWordCount + 1,
+            endWordIndex: i
+          });
+          chunkContent = '';
+          chunkWordCount = 0;
         }
       }
 
       chapterPages.push({
         ...chapter,
         startPage: currentPageIndex - Math.ceil(chapterWords.length / wordsPerPage),
-        endPage: currentPageIndex - 1
+        endPage: currentPageIndex - 1,
+        totalWords: chapterWords.length
       });
     });
 
-    return { chapters: chapterPages, toc, bookContent: newBookContent };
+    return { 
+      chapters: chapterPages, 
+      toc, 
+      bookContent: newBookContent,
+      bookContentChunks: newBookContentChunks 
+    };
   };
 
   const getCurrentChapterTitle = () => {
@@ -250,9 +282,10 @@ function App() {
       setBookTitle(bookTitleText);
       
       // Parse EPUB content and structure
-      const { chapters: parsedChapters, toc: parsedToc, bookContent: newBookContent } = await parseEpubContent(contents);
+      const { chapters: parsedChapters, toc: parsedToc, bookContent: newBookContent, bookContentChunks: newBookContentChunks } = await parseEpubContent(contents);
       
       setBookContent(newBookContent);
+      setBookContentChunks(newBookContentChunks); // Set the chunks
       setChapters(parsedChapters);
       setTableOfContents(parsedToc);
       setCurrentPageIndex(0);
@@ -269,6 +302,7 @@ function App() {
         Title: ${bookTitleText}
         Chapters: ${parsedChapters.length}
         Pages: ${Math.ceil(newBookContent.length / 2)}
+        Total Chunks: ${newBookContentChunks.length}
         File Size: ${(file.size / 1024).toFixed(1)} KB
       `);
 
@@ -348,7 +382,7 @@ function App() {
   const fetchWordDefinition = async (word) => {
     setIsLoadingDefinition(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/definition?word=${encodeURIComponent(word)}`);
+      const response = await fetch(`http://localhost:5001/api/definition?word=${encodeURIComponent(word)}`);
       const data = await response.json();
       
       if (data.error) {
@@ -374,9 +408,43 @@ function App() {
       return formattedDefinition;
     } catch (error) {
       console.error('Error fetching definition:', error);
-      return `Error fetching definition for "${word}". Make sure the Flask server is running.`;
+      return `Error fetching definition for "${word}". Make sure the dictionary server is running on port 5001.`;
     } finally {
       setIsLoadingDefinition(false);
+    }
+  };
+
+  // Function to fetch text explanation from Flask API
+  const fetchTextExplanation = async (selectedText) => {
+    setIsLoadingExplanation(true);
+    try {
+      // Extract content chunks for context
+      const contentChunks = bookContentChunks.map(chunk => chunk.content);
+      
+      const response = await fetch('http://localhost:5000/explain', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selected_text: selectedText,
+          book_title: bookTitle,
+          book_chunks: contentChunks
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.error) {
+        return `Error: ${data.error}`;
+      }
+      
+      return data.explanation || 'No explanation available.';
+    } catch (error) {
+      console.error('Error fetching explanation:', error);
+      return `Error fetching explanation. Make sure the Flask server is running on port 5000.`;
+    } finally {
+      setIsLoadingExplanation(false);
     }
   };
 
@@ -392,21 +460,52 @@ function App() {
         // Check if it's a single word (no spaces)
         const words = selectedTextContent.split(/\s+/);
         if (words.length === 1 && words[0].length > 0) {
+          // Single word - fetch definition
           const cleanWord = words[0].replace(/[^\w]/g, '').toLowerCase(); // Remove punctuation
           setSelectedWord(cleanWord);
           setWordDefinition('Loading definition...');
+          setTextExplanation('Select multiple words to see an explanation'); // Reset explanation
           const definition = await fetchWordDefinition(cleanWord);
           setWordDefinition(definition);
+          
+          // Scroll to the word definition section if panel is open
+          if (isPanelOpen) {
+            setTimeout(() => {
+              const wordDefElement = document.getElementById('wordDefinition');
+              if (wordDefElement) {
+                wordDefElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 100);
+          }
+        } else if (words.length > 1) {
+          // Multiple words - fetch explanation
+          setSelectedWord(''); // Reset single word state
+          setWordDefinition('Select a single word to see its definition'); // Reset definition
+          setTextExplanation('Loading explanation...');
+          const explanation = await fetchTextExplanation(selectedTextContent);
+          setTextExplanation(explanation);
+          
+          // Scroll to the text explanation section if panel is open
+          if (isPanelOpen) {
+            setTimeout(() => {
+              const textExplElement = document.getElementById('textExplanation');
+              if (textExplElement) {
+                textExplElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }, 100);
+          }
         } else {
+          // Reset both states if no valid selection
           setSelectedWord('');
           setWordDefinition('Select a single word to see its definition');
+          setTextExplanation('Select multiple words to see an explanation');
         }
       }
     };
 
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, []);
+  }, [bookContentChunks, bookTitle, isPanelOpen]); // Add isPanelOpen to dependencies
 
   // Close panels when clicking outside
   useEffect(() => {
@@ -437,18 +536,28 @@ function App() {
     try {
       const zip = new JSZip();
       const contents = await zip.loadAsync(book.fileData);
-      const { chapters, toc, bookContent } = await parseEpubContent(contents);
+      const { chapters, toc, bookContent, bookContentChunks } = await parseEpubContent(contents);
 
       const lastReadPage = await getLastReadPage(book.id); // Retrieve last read page
 
       setCurrentBook(book);
       setBookContent(bookContent);
+      setBookContentChunks(book.contentChunks || bookContentChunks); // Use stored chunks if available
       setChapters(chapters);
       setTableOfContents(toc);
       setBookTitle(book.title);
       setCurrentPageIndex(lastReadPage); // Open at last read page
       setView('reader');
       setShowReader(true);
+
+      // Update book info to show stored chunk information
+      setBookInfo(`
+        Title: ${book.title}
+        Author: ${book.author || 'Unknown Author'}
+        Chapters: ${chapters.length}
+        Total Chunks: ${book.contentChunks ? book.contentChunks.length : 0}
+        File Size: ${(book.fileSize / 1024).toFixed(1)} KB
+      `);
     } catch (error) {
       console.error('Error loading book:', error);
       alert('Failed to load book. Please try again.');
@@ -642,7 +751,7 @@ function App() {
           {selectedWord && (
             <>
               <br />
-              <p style={{color: '#333', fontWeight: '600', fontSize: '1rem'}}>Word Definition and Usage:</p>
+              <p style={{color: '#333', fontWeight: '600', fontSize: '1rem'}}>Word Definition:</p>
               <div 
                 id="wordDefinition" 
                 style={{
@@ -666,6 +775,38 @@ function App() {
                   </div>
                 ) : (
                   wordDefinition
+                )}
+              </div>
+            </>
+          )}
+          {selectedText && selectedText.split(/\s+/).length > 1 && (
+            <>
+              <br />
+              <p style={{color: '#333', fontWeight: '600', fontSize: '1rem'}}>Text Explanation:</p>
+              <div 
+                id="textExplanation" 
+                style={{
+                  marginTop: '10px', 
+                  padding: '12px', 
+                  background: 'rgba(46, 125, 50, 0.08)', 
+                  borderRadius: '8px', 
+                  fontStyle: 'normal', 
+                  minHeight: '50px',
+                  fontSize: '0.9rem',
+                  color: '#444',
+                  border: '1px solid rgba(46, 125, 50, 0.2)',
+                  whiteSpace: 'pre-line',
+                  fontFamily: 'inherit',
+                  lineHeight: '1.5'
+                }}
+              >
+                {isLoadingExplanation ? (
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <div className="spinner" style={{width: '16px', height: '16px'}}></div>
+                    Loading explanation...
+                  </div>
+                ) : (
+                  textExplanation
                 )}
               </div>
             </>

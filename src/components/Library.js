@@ -148,6 +148,9 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
 
         const metadata = await extractBookMetadata(contents);
 
+        // Process content into chunks for storage
+        const { bookContentChunks } = await processBookContent(contents);
+
         const book = {
           id: Date.now(),
           title: metadata.title || file.name.replace('.epub', ''),
@@ -156,7 +159,9 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
           fileData: arrayBuffer,
           coverUrl: metadata.coverImage, // Store as base64 string
           dateAdded: new Date(),
-          fileSize: file.size
+          fileSize: file.size,
+          contentChunks: bookContentChunks, // Store chunks directly in book object
+          chunksCount: bookContentChunks.length
         };
 
         await addBookToDb(book);
@@ -166,6 +171,97 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
         console.error('Error processing EPUB:', error);
       }
     }
+  };
+
+  const processBookContent = async (zip) => {
+    let chapters = [];
+    let opfPath = '';
+
+    // Find the OPF file
+    for (const filename in zip.files) {
+      if (filename.endsWith('.opf')) {
+        opfPath = filename;
+        break;
+      }
+    }
+
+    if (opfPath) {
+      try {
+        const opfContent = await zip.files[opfPath].async('text');
+        const parser = new DOMParser();
+        const opfDoc = parser.parseFromString(opfContent, 'text/xml');
+        
+        // Extract spine order
+        const spineItems = opfDoc.querySelectorAll('spine itemref');
+        const manifestItems = opfDoc.querySelectorAll('manifest item');
+        
+        // Create manifest map
+        const manifestMap = {};
+        manifestItems.forEach(item => {
+          manifestMap[item.getAttribute('id')] = item.getAttribute('href');
+        });
+
+        // Process spine items to extract chapter content
+        const basePath = opfPath.substring(0, opfPath.lastIndexOf('/') + 1);
+        
+        for (let i = 0; i < spineItems.length; i++) {
+          const itemref = spineItems[i];
+          const idref = itemref.getAttribute('idref');
+          const href = manifestMap[idref];
+          
+          if (href) {
+            const fullPath = basePath + href;
+            if (zip.files[fullPath]) {
+              const content = await zip.files[fullPath].async('text');
+              const tempDiv = document.createElement('div');
+              tempDiv.innerHTML = content;
+
+              chapters.push({
+                id: i,
+                title: `Chapter ${i + 1}`,
+                content: tempDiv.innerHTML.trim(),
+                href: href
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Error parsing EPUB structure:', error);
+      }
+    }
+
+    // Create content chunks
+    const chunkSize = 1000; // Words per chunk
+    const bookContentChunks = [];
+
+    chapters.forEach((chapter, chapterIndex) => {
+      const chapterWords = chapter.content.split(/\s+/);
+      let chunkContent = '';
+      let chunkWordCount = 0;
+
+      for (let i = 0; i < chapterWords.length; i++) {
+        const word = chapterWords[i];
+        chunkContent += `${word} `;
+        chunkWordCount++;
+
+        // Create storage chunks
+        if (chunkWordCount >= chunkSize || i === chapterWords.length - 1) {
+          bookContentChunks.push({
+            id: bookContentChunks.length,
+            chapterIndex: chapterIndex,
+            chapterTitle: chapter.title,
+            content: chunkContent.trim(),
+            wordCount: chunkWordCount,
+            startWordIndex: i - chunkWordCount + 1,
+            endWordIndex: i
+          });
+          chunkContent = '';
+          chunkWordCount = 0;
+        }
+      }
+    });
+
+    return { bookContentChunks };
   };
 
   const handleDeleteBook = async (bookId, event) => {

@@ -254,31 +254,6 @@ body {
   background: rgba(102, 126, 234, 0.5);
 }
 
-/* Definition Text */
-#wordDefinition {
-  max-height: 300px;
-  overflow-y: auto;
-  line-height: 1.5;
-}
-
-#wordDefinition::-webkit-scrollbar {
-  width: 4px;
-}
-
-#wordDefinition::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 2px;
-}
-
-#wordDefinition::-webkit-scrollbar-thumb {
-  background: rgba(118, 75, 162, 0.3);
-  border-radius: 2px;
-}
-
-#wordDefinition::-webkit-scrollbar-thumb:hover {
-  background: rgba(118, 75, 162, 0.5);
-}
-
 /* Footer */
 .reader-footer {
   padding: 15px 30px;
@@ -443,26 +418,51 @@ body {
   right: -400px;
   width: 400px;
   height: 100vh;
-  background: rgba(255, 255, 255, 0.98); /* Slightly more opaque */
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(15px);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 200;
   padding: 30px;
+  overflow-y: auto; /* Add vertical scrolling */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 .sliding-panel.open {
   right: 0;
 }
 
+/* Styling for the scrollbar in the sliding panel */
+.sliding-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sliding-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.sliding-panel::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 4px;
+}
+
+.sliding-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+/* Ensure the panel content doesn't exceed viewport height */
+.sliding-panel > div {
+  max-height: calc(100vh - 60px); /* Account for padding */
+}
+
 .panel-header {
   font-size: 20px;
-  font-weight: 700; /* Bolder font weight */
-  color: #2c3e50; /* Darker color for better contrast */
-  margin-bottom: 25px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 2px solid rgba(102, 126, 234, 0.2); /* Thicker border with brand color */
-  text-align: center;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .panel-toggle {

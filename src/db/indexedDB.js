@@ -56,12 +56,21 @@ export const addBookToDb = async (book) => {
         const transaction = dbInstance.transaction([STORE_BOOKS], 'readwrite');
         const store = transaction.objectStore(STORE_BOOKS);
 
+        // Ensure content chunks are properly stored
+        const bookToStore = {
+            ...book,
+            contentChunks: book.contentChunks || [],
+            chunksCount: book.contentChunks ? book.contentChunks.length : 0,
+            dateAdded: book.dateAdded || new Date(),
+            lastUpdated: new Date()
+        };
+
         // Add the book object to the store.
-        const request = store.add(book);
+        const request = store.add(bookToStore);
 
         request.onsuccess = () => {
-            console.log(`Book "${book.title}" added successfully.`);
-            resolve(book);
+            console.log(`Book "${book.title}" added successfully with ${bookToStore.chunksCount} content chunks.`);
+            resolve(bookToStore);
         };
         request.onerror = (event) => {
             console.error("Error adding book:", event.target.error);
@@ -208,6 +217,79 @@ export const updateBookProgress = async (bookId, lastReadPage, totalPages) => {
 
         request.onerror = (event) => {
             console.error(`Error retrieving book with ID ${bookId}:`, event.target.error);
+            reject(event.target.error);
+        };
+    });
+};
+
+/**
+ * Updates a book's content chunks in the IndexedDB.
+ * @param {string} bookId - The ID of the book to update.
+ * @param {Array} bookContentChunks - The array of content chunks to store.
+ * @returns {Promise<void>} A promise that resolves when the book chunks are successfully updated.
+ */
+export const updateBookContentChunks = async (bookId, bookContentChunks) => {
+    const dbInstance = await initDb(); // Ensure DB is initialized.
+    return new Promise((resolve, reject) => {
+        const transaction = dbInstance.transaction([STORE_BOOKS], 'readwrite');
+        const store = transaction.objectStore(STORE_BOOKS);
+
+        // Get the book by its ID.
+        const request = store.get(bookId);
+
+        request.onsuccess = () => {
+            const book = request.result;
+            if (book) {
+                book.contentChunks = bookContentChunks;
+                book.chunksCount = bookContentChunks.length;
+                book.lastUpdated = new Date();
+
+                // Update the book in the store.
+                const updateRequest = store.put(book);
+                updateRequest.onsuccess = () => {
+                    console.log(`Book content chunks updated: ${book.title} (${bookContentChunks.length} chunks)`);
+                    resolve();
+                };
+                updateRequest.onerror = (event) => {
+                    console.error('Error updating book content chunks:', event.target.error);
+                    reject(event.target.error);
+                };
+            } else {
+                reject(new Error(`Book with ID ${bookId} not found.`));
+            }
+        };
+
+        request.onerror = (event) => {
+            console.error(`Error retrieving book with ID ${bookId}:`, event.target.error);
+            reject(event.target.error);
+        };
+    });
+};
+
+/**
+ * Retrieves content chunks for a specific book from the IndexedDB.
+ * @param {string} bookId - The ID of the book to retrieve chunks for.
+ * @returns {Promise<Array>} A promise that resolves with an array of content chunks.
+ */
+export const getBookContentChunks = async (bookId) => {
+    const dbInstance = await initDb(); // Ensure DB is initialized.
+    return new Promise((resolve, reject) => {
+        const transaction = dbInstance.transaction([STORE_BOOKS], 'readonly');
+        const store = transaction.objectStore(STORE_BOOKS);
+
+        // Get the book by its ID.
+        const request = store.get(bookId);
+
+        request.onsuccess = () => {
+            const book = request.result;
+            if (book && book.contentChunks) {
+                resolve(book.contentChunks);
+            } else {
+                resolve([]); // Return empty array if no chunks found
+            }
+        };
+        request.onerror = (event) => {
+            console.error(`Error retrieving content chunks for book ${bookId}:`, event.target.error);
             reject(event.target.error);
         };
     });
