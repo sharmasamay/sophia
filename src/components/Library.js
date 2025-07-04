@@ -9,6 +9,7 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadOverlay, setShowUploadOverlay] = useState(false);
   const [activeMenu, setActiveMenu] = useState(null); // Track active menu
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -311,6 +312,12 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
     alert(description || 'No description available.');
   };
 
+  // Filter books based on search query
+  const filteredBooks = books.filter(book => 
+    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (book.author && book.author.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   if (isLoading) {
     return (
       <div className="library-container">
@@ -346,9 +353,21 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
 
     {/* Books Grid Section */}
     <div className="books-section">
-      <h2 className="section-title">My Library</h2>
+      <div className="section-header">
+        <h2 className="section-title">My Library</h2>
+        <div className="search-container">
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search books by title or author..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          <div className="search-icon">🔍</div>
+        </div>
+      </div>
       <div className="books-grid">
-        {books.map((book) => (
+        {filteredBooks.map((book) => (
           <div 
             key={book.id} 
             className="book-card" 
@@ -398,6 +417,11 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
             </button>
           </div>
         ))}
+        {filteredBooks.length === 0 && searchQuery && (
+          <div className="no-results">
+            <p>No books found matching "{searchQuery}"</p>
+          </div>
+        )}
       </div>
     </div>
   </div>

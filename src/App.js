@@ -23,16 +23,202 @@ function App() {
   const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
   const [showUploadOverlay, setShowUploadOverlay] = useState(true);
   const [showReader, setShowReader] = useState(false);
-  const [showPlusBtn, setShowPlusBtn] = useState(false);
   const [showPanelToggle, setShowPanelToggle] = useState(false);
   const [showTocToggle, setShowTocToggle] = useState(false);
   const [isLoadingDb, setIsLoadingDb] = useState(true);
   const [dbError, setDbError] = useState(null);
   const [books, setBooks] = useState([]);
   const [view, setView] = useState('library'); // 'library' or 'reader'
-  const [isDarkMode, setIsDarkMode] = useState(false); // Track mode
-  
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [selectedFont, setSelectedFont] = useState('Georgia'); // Add font state
+  const [isFontDropdownOpen, setIsFontDropdownOpen] = useState(false); // Add dropdown state
+  const [selectedTheme, setSelectedTheme] = useState('classic'); // Add theme state
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false); // Add theme dropdown state
+  const [fontSize, setFontSize] = useState(16); // Add font size state
+  const [isFontSizeDropdownOpen, setIsFontSizeDropdownOpen] = useState(false); // Add font size dropdown state
+
   const fileInputRef = useRef(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Available fonts for selection
+  const availableFonts = [
+    { name: 'Georgia', family: 'Georgia, serif' },
+    { name: 'Times New Roman', family: '"Times New Roman", serif' },
+    { name: 'Garamond', family: 'Garamond, serif' },
+    { name: 'Palatino', family: 'Palatino, serif' },
+    { name: 'Book Antiqua', family: '"Book Antiqua", serif' },
+    { name: 'Crimson Text', family: '"Crimson Text", serif' },
+    { name: 'Libre Baskerville', family: '"Libre Baskerville", serif' },
+    { name: 'Source Serif Pro', family: '"Source Serif Pro", serif' },
+    { name: 'Open Sans', family: '"Open Sans", sans-serif' },
+    { name: 'Lato', family: 'Lato, sans-serif' },
+    { name: 'Roboto', family: 'Roboto, sans-serif' },
+    { name: 'Nunito', family: 'Nunito, sans-serif' },
+    { name: 'Inter', family: 'Inter, sans-serif' },
+    { name: 'Merriweather', family: 'Merriweather, serif' },
+    { name: 'Playfair Display', family: '"Playfair Display", serif' },
+    { name: 'Lora', family: 'Lora, serif' }
+  ];
+
+  // Available font sizes for selection
+  const availableFontSizes = [
+    { size: 12, label: 'Extra Small' },
+    { size: 14, label: 'Small' },
+    { size: 16, label: 'Medium' },
+    { size: 18, label: 'Large' },
+    { size: 20, label: 'Extra Large' },
+    { size: 22, label: 'Huge' },
+    { size: 24, label: 'Extra Huge' }
+  ];
+
+  // Available themes for selection
+  const availableThemes = [
+    { 
+      id: 'classic', 
+      name: 'Classic', 
+      background: '#ffffff',
+      text: '#333333',
+      icon: '📖'
+    },
+    { 
+      id: 'sepia', 
+      name: 'Sepia', 
+      background: '#f4f1ea',
+      text: '#5c4b37',
+      icon: '📜'
+    },
+    { 
+      id: 'dark', 
+      name: 'Dark', 
+      background: '#1a1a1a',
+      text: '#e8e8e8',
+      icon: '🌙'
+    },
+    { 
+      id: 'midnight', 
+      name: 'Midnight', 
+      background: '#0f0f23',
+      text: '#cccccc',
+      icon: '🌃'
+    },
+    { 
+      id: 'forest', 
+      name: 'Forest', 
+      background: '#1a2f1a',
+      text: '#c8e6c9',
+      icon: '🌲'
+    },
+    { 
+      id: 'ocean', 
+      name: 'Ocean', 
+      background: '#0d1b2a',
+      text: '#b3d9ff',
+      icon: '🌊'
+    },
+    { 
+      id: 'warm', 
+      name: 'Warm', 
+      background: '#2d1b2e',
+      text: '#f0e68c',
+      icon: '🔥'
+    },
+    { 
+      id: 'paper', 
+      name: 'Paper', 
+      background: '#f7f3e9',
+      text: '#2c2c2c',
+      icon: '📄'
+    },
+    { 
+      id: 'contrast', 
+      name: 'High Contrast', 
+      background: '#000000',
+      text: '#ffffff',
+      icon: '⚫'
+    }
+  ];
+
+  const handleFontChange = (font) => {
+    setSelectedFont(font.name);
+    setIsFontDropdownOpen(false);
+  };
+
+  const toggleFontDropdown = () => {
+    setIsFontDropdownOpen(!isFontDropdownOpen);
+  };
+
+  const handleFontSizeChange = (size) => {
+    setFontSize(size);
+    setIsFontSizeDropdownOpen(false);
+  };
+
+  const toggleFontSizeDropdown = () => {
+    setIsFontSizeDropdownOpen(!isFontSizeDropdownOpen);
+  };
+
+  const handleThemeChange = (theme) => {
+    setSelectedTheme(theme.id);
+    setIsThemeDropdownOpen(false);
+  };
+
+  const toggleThemeDropdown = () => {
+    setIsThemeDropdownOpen(!isThemeDropdownOpen);
+  };
+
+  const getCurrentTheme = () => {
+    return availableThemes.find(theme => theme.id === selectedTheme) || availableThemes[0];
+  };
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClick = (event) => {
+      const fontDropdown = document.getElementById('fontDropdown');
+      const fontToggle = document.getElementById('fontToggle');
+      const themeDropdown = document.getElementById('themeDropdown');
+      const themeToggle = document.getElementById('themeToggle');
+      const fontSizeDropdown = document.getElementById('fontSizeDropdown');
+      const fontSizeToggle = document.getElementById('fontSizeToggle');
+      
+      if (isFontDropdownOpen && fontDropdown && fontToggle && 
+          !fontDropdown.contains(event.target) && !fontToggle.contains(event.target)) {
+        setIsFontDropdownOpen(false);
+      }
+
+      if (isThemeDropdownOpen && themeDropdown && themeToggle && 
+          !themeDropdown.contains(event.target) && !themeToggle.contains(event.target)) {
+        setIsThemeDropdownOpen(false);
+      }
+
+      if (isFontSizeDropdownOpen && fontSizeDropdown && fontSizeToggle && 
+          !fontSizeDropdown.contains(event.target) && !fontSizeToggle.contains(event.target)) {
+        setIsFontSizeDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, [isFontDropdownOpen, isThemeDropdownOpen, isFontSizeDropdownOpen]);
+
+  // Get the current font family
+  const getCurrentFontFamily = () => {
+    const font = availableFonts.find(f => f.name === selectedFont);
+    return font ? font.family : 'Georgia, serif';
+  };
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const saveLastReadPage = async (bookId, pageIndex, totalPages) => {
     try {
@@ -293,7 +479,6 @@ function App() {
       // Hide upload overlay and show reader
       setShowUploadOverlay(false);
       setShowReader(true);
-      setShowPlusBtn(true);
       setShowPanelToggle(true);
       setShowTocToggle(true);
 
@@ -312,24 +497,60 @@ function App() {
   };
 
   const updateNavigation = () => {
-    const currentPageNum = Math.floor(currentPageIndex / 2) + 1;
-    const totalPages = Math.ceil(bookContent.length / 2);
-    return { currentPageNum, totalPages };
+    if (isMobile) {
+      // Mobile: single page navigation
+      const currentPageNum = currentPageIndex + 1;
+      const totalPages = bookContent.length;
+      return { currentPageNum, totalPages };
+    } else {
+      // Desktop: two-page spread navigation
+      const currentPageNum = Math.floor(currentPageIndex / 2) + 1;
+      const totalPages = Math.ceil(bookContent.length / 2);
+      return { currentPageNum, totalPages };
+    }
   };
 
   const nextPage = () => {
-    if (currentPageIndex < bookContent.length - 2) {
-      const newPageIndex = currentPageIndex + 2;
-      setCurrentPageIndex(newPageIndex);
-      saveLastReadPage(currentBook.id, newPageIndex, Math.ceil(bookContent.length / 2)); // Save progress
+    if (isMobile) {
+      // Mobile: advance by 1 page
+      if (currentPageIndex < bookContent.length - 1) {
+        const newPageIndex = currentPageIndex + 1;
+        setCurrentPageIndex(newPageIndex);
+        if (currentBook?.id) {
+          saveLastReadPage(currentBook.id, newPageIndex, bookContent.length);
+        }
+      }
+    } else {
+      // Desktop: advance by 2 pages
+      if (currentPageIndex < bookContent.length - 2) {
+        const newPageIndex = currentPageIndex + 2;
+        setCurrentPageIndex(newPageIndex);
+        if (currentBook?.id) {
+          saveLastReadPage(currentBook.id, newPageIndex, Math.ceil(bookContent.length / 2));
+        }
+      }
     }
   };
 
   const previousPage = () => {
-    if (currentPageIndex > 0) {
-      const newPageIndex = currentPageIndex - 2;
-      setCurrentPageIndex(newPageIndex);
-      saveLastReadPage(currentBook.id, newPageIndex, Math.ceil(bookContent.length / 2)); // Save progress
+    if (isMobile) {
+      // Mobile: go back by 1 page
+      if (currentPageIndex > 0) {
+        const newPageIndex = currentPageIndex - 1;
+        setCurrentPageIndex(newPageIndex);
+        if (currentBook?.id) {
+          saveLastReadPage(currentBook.id, newPageIndex, bookContent.length);
+        }
+      }
+    } else {
+      // Desktop: go back by 2 pages
+      if (currentPageIndex > 0) {
+        const newPageIndex = currentPageIndex - 2;
+        setCurrentPageIndex(newPageIndex);
+        if (currentBook?.id) {
+          saveLastReadPage(currentBook.id, newPageIndex, Math.ceil(bookContent.length / 2));
+        }
+      }
     }
   };
 
@@ -362,8 +583,73 @@ function App() {
     setIsTocOpen(false); // Close TOC after selection
   };
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen);
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: chatInput,
+      timestamp: new Date()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsLoadingChat(true);
+
+    try {
+      // Extract content chunks for context
+      const contentChunks = bookContentChunks.map(chunk => chunk.content);
+      
+      const response = await fetch('http://localhost:5000/explain', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          selected_text: chatInput,
+          book_title: bookTitle,
+          book_chunks: contentChunks
+        })
+      });
+      
+      const data = await response.json();
+      
+      const botMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: data.error ? `Error: ${data.error}` : (data.explanation || 'No response available.'),
+        timestamp: new Date()
+      };
+
+      setChatMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('Error in chat:', error);
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: 'Error connecting to chat service. Make sure the server is running.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoadingChat(false);
+    }
+  };
+
+  const handleChatKeyPress = (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendChatMessage();
+    }
+  };
+
+  const clearChat = () => {
+    setChatMessages([]);
   };
 
   useEffect(() => {
@@ -514,6 +800,8 @@ function App() {
       const toggle = document.getElementById('panelToggle');
       const tocPanel = document.getElementById('tocPanel');
       const tocToggle = document.getElementById('tocToggle');
+      const chatPanel = document.getElementById('chatPanel');
+      const chatToggle = document.getElementById('chatToggle');
       
       if (isPanelOpen && panel && toggle && !panel.contains(event.target) && !toggle.contains(event.target)) {
         togglePanel();
@@ -522,11 +810,15 @@ function App() {
       if (isTocOpen && tocPanel && tocToggle && !tocPanel.contains(event.target) && !tocToggle.contains(event.target)) {
         toggleToc();
       }
+
+      if (isChatOpen && chatPanel && chatToggle && !chatPanel.contains(event.target) && !chatToggle.contains(event.target)) {
+        toggleChat();
+      }
     };
 
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
-  }, [isPanelOpen, isTocOpen]);
+  }, [isPanelOpen, isTocOpen, isChatOpen]); // Add isChatOpen to dependencies
 
   const handleChooseFile = () => {
     fileInputRef.current.click();
@@ -549,6 +841,8 @@ function App() {
       setCurrentPageIndex(lastReadPage); // Open at last read page
       setView('reader');
       setShowReader(true);
+      setShowPanelToggle(true);
+      setShowTocToggle(true); // Add this line to show the TOC toggle
 
       // Update book info to show stored chunk information
       setBookInfo(`
@@ -573,7 +867,6 @@ function App() {
   const handleBackToLibrary = () => {
     setView('library');
     setShowReader(false);
-    setShowPlusBtn(false);
     setShowPanelToggle(false);
     setShowTocToggle(false);
   };
@@ -588,28 +881,126 @@ function App() {
           onNewBookUpload={handleNewBookUpload}
         />
       ) : (
-      <div className={`reader-container ${showReader ? 'visible' : ''} ${isDarkMode ? 'dark-mode' : 'light-mode'}`} id="readerContainer">
+      <div className={`reader-container ${showReader ? 'visible' : ''}`} id="readerContainer">
         <div className="reader-header">
-          <button 
-            className="back-button" 
-            onClick={handleBackToLibrary}
-          >
-            ←
-          </button>
-          <div>
+          <div className="header-left">
+            <button 
+              className="back-button" 
+              onClick={handleBackToLibrary}
+            >
+              ←
+            </button>
+            {showTocToggle && (
+              <button 
+                className={`toc-toggle-header ${isTocOpen ? 'toc-open' : ''}`} 
+                id="tocToggle" 
+                onClick={toggleToc}
+              >
+                📑
+              </button>
+            )}
+          </div>
+          <div className="header-center">
             <h1 className="book-title" id="bookTitle">{bookTitle}</h1>
             <p className="chapter-title" id="chapterTitle">{getCurrentChapterTitle()}</p>
           </div>
-          <button 
-            className="nav-btn" 
-            onClick={toggleDarkMode}
-            style={{ background: isDarkMode ? '#F5F5DC' : '#333', color: isDarkMode ? '#333' : '#F5F5DC' }}
-          >
-            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-          </button>
+          <div className="header-right">
+            <div className="font-selector">
+              <button 
+                className="font-toggle"
+                id="fontToggle"
+                onClick={toggleFontDropdown}
+              >
+                Aa
+              </button>
+              {isFontDropdownOpen && (
+                <div className="font-dropdown" id="fontDropdown">
+                  <div className="font-dropdown-header">Choose Font</div>
+                  {availableFonts.map((font) => (
+                    <div
+                      key={font.name}
+                      className={`font-option ${selectedFont === font.name ? 'selected' : ''}`}
+                      style={{ fontFamily: font.family }}
+                      onClick={() => handleFontChange(font)}
+                    >
+                      {font.name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="font-size-selector">
+              <button 
+                className="font-size-toggle"
+                id="fontSizeToggle"
+                onClick={toggleFontSizeDropdown}
+              >
+                {fontSize}
+              </button>
+              {isFontSizeDropdownOpen && (
+                <div className="font-size-dropdown" id="fontSizeDropdown">
+                  <div className="font-size-dropdown-header">Font Size</div>
+                  {availableFontSizes.map((fontSizeOption) => (
+                    <div
+                      key={fontSizeOption.size}
+                      className={`font-size-option ${fontSize === fontSizeOption.size ? 'selected' : ''}`}
+                      onClick={() => handleFontSizeChange(fontSizeOption.size)}
+                    >
+                      <span className="font-size-label">{fontSizeOption.label}</span>
+                      <span className="font-size-value">{fontSizeOption.size}px</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="theme-selector">
+              <button 
+                className="theme-toggle"
+                id="themeToggle"
+                onClick={toggleThemeDropdown}
+              >
+                {getCurrentTheme().icon}
+              </button>
+              {isThemeDropdownOpen && (
+                <div className="theme-dropdown" id="themeDropdown">
+                  <div className="theme-dropdown-header">Choose Theme</div>
+                  {availableThemes.map((theme) => (
+                    <div
+                      key={theme.id}
+                      className={`theme-option ${selectedTheme === theme.id ? 'selected' : ''}`}
+                      onClick={() => handleThemeChange(theme)}
+                    >
+                      <div className="theme-preview">
+                        <div 
+                          className="theme-color-preview"
+                          style={{ 
+                            backgroundColor: theme.background,
+                            color: theme.text,
+                            border: `1px solid ${theme.text}20`
+                          }}
+                        >
+                          {theme.icon}
+                        </div>
+                        <span className="theme-name">{theme.name}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
         <div className="pages-container">
-          <div className={`page ${isDarkMode ? 'dark-mode' : 'light-mode'}`} id="leftPage">
+          <div 
+            className="page" 
+            id="leftPage"
+            style={{ 
+              fontFamily: getCurrentFontFamily(),
+              backgroundColor: getCurrentTheme().background,
+              color: getCurrentTheme().text,
+              fontSize: `${fontSize}px`
+            }}
+          >
             {bookContent.length > 0 ? (
               <div dangerouslySetInnerHTML={{ __html: bookContent[currentPageIndex] || '' }} />
             ) : (
@@ -619,16 +1010,27 @@ function App() {
               </div>
             )}
           </div>
-          <div className={`page ${isDarkMode ? 'dark-mode' : 'light-mode'}`} id="rightPage">
-            {bookContent.length > 0 ? (
-              <div dangerouslySetInnerHTML={{ __html: bookContent[currentPageIndex + 1] || '' }} />
-            ) : (
-              <div className="loading">
-                <div className="spinner"></div>
-                Your book content will appear here
-              </div>
-            )}
-          </div>
+          {!isMobile && (
+            <div 
+              className="page" 
+              id="rightPage"
+              style={{ 
+                fontFamily: getCurrentFontFamily(),
+                backgroundColor: getCurrentTheme().background,
+                color: getCurrentTheme().text,
+                fontSize: `${fontSize}px`
+              }}
+            >
+              {bookContent.length > 0 ? (
+                <div dangerouslySetInnerHTML={{ __html: bookContent[currentPageIndex + 1] || '' }} />
+              ) : (
+                <div className="loading">
+                  <div className="spinner"></div>
+                  Your book content will appear here
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="reader-footer">
           <button 
@@ -644,31 +1046,13 @@ function App() {
             className="nav-btn" 
             id="nextBtn" 
             onClick={nextPage} 
-            disabled={currentPageIndex >= bookContent.length - 2}
+            disabled={isMobile ? currentPageIndex >= bookContent.length - 1 : currentPageIndex >= bookContent.length - 2}
           >
             ›
           </button>
         </div>
       </div>
       )}
-
-      {/* Plus Button */}
-      <button 
-        className={`plus-btn ${showPlusBtn ? 'visible' : ''}`} 
-        id="plusBtn" 
-        onClick={handleChooseFile}
-      >
-        +
-      </button>
-
-      {/* TOC Toggle Button */}
-      <button 
-        className={`toc-toggle ${showTocToggle ? 'visible' : ''} ${isTocOpen ? 'toc-open' : ''}`} 
-        id="tocToggle" 
-        onClick={toggleToc}
-      >
-        📖
-      </button>
 
       {/* TOC Panel */}
       <div className={`toc-panel ${isTocOpen ? 'open' : ''}`} id="tocPanel">
@@ -811,6 +1195,74 @@ function App() {
               </div>
             </>
           )}
+        </div>
+      </div>
+
+      {/* Chat Toggle Button */}
+      <button 
+        className={`chat-toggle ${showTocToggle ? 'visible' : ''} ${isChatOpen ? 'chat-open' : ''}`} 
+        id="chatToggle" 
+        onClick={toggleChat}
+      >
+        💬
+      </button>
+
+      {/* Chat Panel */}
+      <div className={`chat-panel ${isChatOpen ? 'open' : ''}`} id="chatPanel">
+        <div className="panel-header">
+          Chat with Sophia
+          <button className="clear-chat-btn" onClick={clearChat}>Clear</button>
+        </div>
+        <div className="chat-content">
+          <div className="chat-messages">
+            {chatMessages.length === 0 ? (
+              <div className="chat-welcome">
+                <p>👋 Hi! I'm Sophia, your reading assistant.</p>
+                <p>Ask me questions about the book you're reading!</p>
+              </div>
+            ) : (
+              chatMessages.map((message) => (
+                <div 
+                  key={message.id} 
+                  className={`chat-message ${message.type === 'user' ? 'user-message' : 'bot-message'}`}
+                >
+                  <div className="message-content">
+                    {message.content}
+                  </div>
+                  <div className="message-timestamp">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+              ))
+            )}
+            {isLoadingChat && (
+              <div className="chat-message bot-message">
+                <div className="message-content">
+                  <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                    <div className="spinner" style={{width: '16px', height: '16px'}}></div>
+                    Thinking...
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="chat-input-container">
+            <textarea
+              className="chat-input"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyPress={handleChatKeyPress}
+              placeholder="Ask me about the book..."
+              rows="2"
+            />
+            <button 
+              className="chat-send-btn" 
+              onClick={sendChatMessage}
+              disabled={!chatInput.trim() || isLoadingChat}
+            >
+              Send
+            </button>
+          </div>
         </div>
       </div>
     </div>

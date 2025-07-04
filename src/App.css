@@ -1,3 +1,6 @@
+/* Import Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600&family=Libre+Baskerville:wght@400;700&family=Source+Serif+Pro:wght@400;600&family=Open+Sans:wght@400;600&family=Lato:wght@400;700&family=Roboto:wght@400;500&family=Nunito:wght@400;600&family=Inter:wght@400;500&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;700&family=Lora:wght@400;600&display=swap');
+
 * {
   margin: 0;
   padding: 0;
@@ -114,36 +117,6 @@ body {
   box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
 }
 
-/* Plus Button */
-.plus-btn {
-  position: fixed;
-  bottom: 30px;
-  right: 30px;
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border: none;
-  border-radius: 50%;
-  color: white;
-  font-size: 24px;
-  cursor: pointer;
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
-  z-index: 100;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  opacity: 0;
-  transform: scale(0);
-}
-
-.plus-btn.visible {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.plus-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 15px 30px rgba(102, 126, 234, 0.5);
-}
-
 /* Reader Container */
 .reader-container {
   flex: 1;
@@ -164,43 +137,415 @@ body {
   transform: translateY(0);
 }
 
-.reader-container.light-mode {
-  background: #ffffff; /* Light background */
-  color: #333; /* Dark text */
-}
-
-.reader-container.dark-mode {
-  background: #333; /* Dark background */
-  color: #ffffff; /* Light text */
-}
+/* Remove old light/dark mode styles */
 
 /* Header */
 .reader-header {
-  display: flex; /* Use flexbox for alignment */
-  align-items: center; /* Center items vertically */
-  justify-content: space-between; /* Space out items */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 20px 30px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-  text-align: center;
   background: #4A4E69;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.header-center {
+  flex: 1;
+  text-align: center;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .book-title {
-  flex: 1; /* Allow title to take up remaining space */
   font-size: 18px;
   font-weight: 450;
   color: #F5F5DC;
   margin: 0;
-  text-align: center; /* Center the title */
 }
 
 .chapter-title {
-  font-size: 16px; /* Slightly larger for better readability */
-  font-weight: 500; /* Make it slightly bolder */
-  color: #F5F5DC; /* Match the book title color */
-  margin-top: 8px; /* Add spacing below the book title */
-  text-align: center; /* Center align the chapter title */
-  text-transform: capitalize; /* Ensure consistent formatting */
+  font-size: 16px;
+  font-weight: 500;
+  color: #F5F5DC;
+  margin-top: 8px;
+  text-transform: capitalize;
+}
+
+.toc-toggle-header {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toc-toggle-header:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.toc-toggle-header.toc-open {
+  background: linear-gradient(135deg, #764ba2, #667eea);
+  box-shadow: 0 8px 20px rgba(118, 75, 162, 0.4);
+}
+
+.toc-toggle {
+  display: none; /* Hide the old side toggle */
+}
+
+/* Font Selector */
+.font-selector {
+  position: relative;
+}
+
+.font-toggle {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.font-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.font-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 300;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.font-dropdown-header {
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.font-option {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  color: #333;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.font-option:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.font-option.selected {
+  background: rgba(102, 126, 234, 0.2);
+  font-weight: 600;
+  position: relative;
+}
+
+.font-option.selected::after {
+  content: '✓';
+  position: absolute;
+  right: 16px;
+  color: #667eea;
+  font-weight: bold;
+}
+
+.font-option:last-child {
+  border-bottom: none;
+}
+
+.font-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.font-dropdown::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.font-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 3px;
+}
+
+.font-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+/* Font Size Selector */
+.font-size-selector {
+  position: relative;
+}
+
+.font-size-toggle {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.font-size-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.font-size-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  min-width: 180px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 300;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.font-size-dropdown-header {
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.font-size-option {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.font-size-option:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.font-size-option.selected {
+  background: rgba(102, 126, 234, 0.2);
+  font-weight: 600;
+  position: relative;
+}
+
+.font-size-option.selected::after {
+  content: '✓';
+  position: absolute;
+  right: 8px;
+  color: #667eea;
+  font-weight: bold;
+}
+
+.font-size-option:last-child {
+  border-bottom: none;
+}
+
+.font-size-label {
+  color: #333;
+  font-size: 14px;
+}
+
+.font-size-value {
+  color: #666;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.font-size-option.selected .font-size-value {
+  margin-right: 20px; /* Make space for checkmark */
+}
+
+.font-size-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.font-size-dropdown::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.font-size-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 3px;
+}
+
+.font-size-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+/* Theme Selector */
+.theme-selector {
+  position: relative;
+}
+
+.theme-toggle {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+.theme-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  min-width: 220px;
+  max-height: 400px;
+  overflow-y: auto;
+  z-index: 300;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.theme-dropdown-header {
+  padding: 12px 16px;
+  font-weight: 600;
+  color: #333;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.theme-option {
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.theme-option:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.theme-option.selected {
+  background: rgba(102, 126, 234, 0.2);
+  position: relative;
+}
+
+.theme-option.selected::after {
+  content: '✓';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #667eea;
+  font-weight: bold;
+}
+
+.theme-option:last-child {
+  border-bottom: none;
+}
+
+.theme-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-color-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.theme-name {
+  color: #333;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.theme-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.theme-dropdown::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.theme-dropdown::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 3px;
+}
+
+.theme-dropdown::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
 }
 
 /* Pages Container */
@@ -214,27 +559,18 @@ body {
 
 .page {
   flex: 1;
-  background: #FDF5E6;
   border-radius: 15px;
   padding: 30px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
   font-size: 16px;
   line-height: 1.6;
-  color: #333;
   user-select: text;
   cursor: text;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.page.light-mode {
-  background: #ffffff; /* Light background */
-  color: #333; /* Dark text */
-}
-
-.page.dark-mode {
-  background: #333; /* Dark background */
-  color: #ffffff; /* Light text */
-}
+/* Remove old page theme styles */
 
 .page::-webkit-scrollbar {
   width: 6px;
@@ -376,39 +712,7 @@ body {
 }
 
 .toc-toggle {
-  position: fixed;
-  top: 50%;
-  left: 20px;
-  transform: translateY(-50%);
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: white;
-  border: none;
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  cursor: pointer;
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-  z-index: 150;
-  transition: transform 0.2s ease, left 0.3s ease;
-  opacity: 0; /* Hidden by default */
-  visibility: hidden; /* Ensure it doesn't take up space */
-}
-
-.reader-container.visible ~ .toc-toggle {
-  opacity: 1; /* Show when reading window is visible */
-  visibility: visible;
-}
-
-.toc-toggle.visible {
-  opacity: 1;
-}
-
-.toc-toggle:hover {
-  transform: translateY(-50%) scale(1.1);
-}
-
-.toc-toggle.toc-open {
-  left: 420px;
+  display: none; /* Hide the old side toggle */
 }
 
 /* Sliding Panel */
@@ -501,6 +805,233 @@ body {
   right: 420px;
 }
 
+/* Chat Panel */
+.chat-panel {
+  position: fixed;
+  bottom: -600px;
+  right: 20px;
+  width: 400px;
+  height: 500px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(15px);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.2);
+  transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 200;
+  border-radius: 15px 15px 0 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.chat-panel.open {
+  bottom: 0;
+}
+
+.chat-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0 20px 20px 20px;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 3px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+.chat-welcome {
+  text-align: center;
+  color: #666;
+  padding: 40px 20px;
+}
+
+.chat-welcome p {
+  margin-bottom: 10px;
+}
+
+.chat-message {
+  max-width: 80%;
+  word-wrap: break-word;
+}
+
+.user-message {
+  align-self: flex-end;
+}
+
+.user-message .message-content {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 18px 18px 5px 18px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.bot-message {
+  align-self: flex-start;
+}
+
+.bot-message .message-content {
+  background: rgba(102, 126, 234, 0.1);
+  color: #333;
+  padding: 10px 15px;
+  border-radius: 18px 18px 18px 5px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  border: 1px solid rgba(102, 126, 234, 0.2);
+}
+
+.message-timestamp {
+  font-size: 0.7rem;
+  color: #999;
+  margin-top: 4px;
+  text-align: right;
+}
+
+.user-message .message-timestamp {
+  text-align: right;
+}
+
+.bot-message .message-timestamp {
+  text-align: left;
+}
+
+.chat-input-container {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.chat-input {
+  flex: 1;
+  padding: 10px 15px;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 20px;
+  resize: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  outline: none;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.chat-input:focus {
+  border-color: rgba(102, 126, 234, 0.6);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.chat-send-btn {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.chat-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.chat-send-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.clear-chat-btn {
+  background: transparent;
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  color: #667eea;
+  padding: 5px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.clear-chat-btn:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.5);
+}
+
+.chat-toggle {
+  position: fixed;
+  top: 50%;
+  right: 20px;
+  transform: translateY(calc(-50% + 70px)); /* Position below panel toggle */
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  border: none;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+  z-index: 150;
+  transition: transform 0.2s ease, right 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+  font-size: 1.2rem;
+}
+
+.reader-container.visible ~ .chat-toggle {
+  opacity: 1;
+  visibility: visible;
+}
+
+.chat-toggle.visible {
+  opacity: 1;
+}
+
+.chat-toggle:hover {
+  transform: translateY(calc(-50% + 70px)) scale(1.1);
+}
+
+.chat-toggle.chat-open {
+  right: 420px; /* Move with panel when chat is open */
+}
+
+/* Update panel header to accommodate clear button */
+.chat-panel .panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 0;
+  padding: 20px 20px 15px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
 /* Text Selection Highlight */
 ::selection {
   background: rgba(102, 126, 234, 0.3);
@@ -532,25 +1063,106 @@ body {
 /* Responsive */
 @media (max-width: 768px) {
   .pages-container {
-      flex-direction: column;
-      gap: 20px;
+    flex-direction: column;
+    gap: 0; /* Remove gap since we only show one page */
+    padding: 20px;
+  }
+  
+  .page {
+    flex: 1;
+    padding: 20px;
+  }
+  
+  /* Hide the second page on mobile */
+  .page:nth-child(2) {
+    display: none;
   }
   
   .sliding-panel {
-      width: 100%;
-      right: -100%;
+    width: 100%;
+    right: -100%;
   }
   
   .panel-toggle.panel-open {
-      right: 20px;
+    right: 20px;
   }
   
   .toc-panel {
-      width: 100%;
-      left: -100%;
+    width: 100%;
+    left: -100%;
   }
   
   .toc-toggle.toc-open {
-      left: 20px;
+    left: 20px;
+  }
+
+  .chat-panel {
+    width: calc(100% - 40px);
+    right: 20px;
+    left: 20px;
+  }
+  
+  .chat-toggle.chat-open {
+    right: 20px; /* Keep consistent position on mobile */
+  }
+  
+  /* Adjust header for mobile */
+  .reader-header {
+    padding: 15px 20px;
+  }
+  
+  .header-left {
+    gap: 10px;
+  }
+  
+  .header-right {
+    gap: 8px;
+  }
+  
+  .book-title {
+    font-size: 16px;
+  }
+  
+  .chapter-title {
+    font-size: 14px;
+  }
+
+  .font-dropdown {
+    right: -10px;
+    min-width: 180px;
+  }
+
+  .font-toggle {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+
+  .font-size-toggle {
+    width: 35px;
+    height: 35px;
+    font-size: 10px;
+  }
+
+  .font-size-dropdown {
+    right: -10px;
+    min-width: 160px;
+  }
+
+  .theme-dropdown {
+    right: -10px;
+    min-width: 200px;
+  }
+
+  .theme-toggle {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+
+  .nav-btn {
+    width: 35px;
+    height: 35px;
+    font-size: 12px;
   }
 }

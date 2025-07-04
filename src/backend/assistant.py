@@ -108,23 +108,11 @@ def explain_text():
 
     # Retrieve relevant context using the helper function
     context_for_explanation = get_context_for_explanation(selected_text, book_chunks, max_context_chunks=3)
-    print(context_for_explanation)
 
     # --- Construct the detailed and intricate prompt ---
     prompt = f"""
-    You are a highly concise and helpful reading assistant. Your goal is to guide the user towards understanding a specific passage from a book, based *only* on the provided context. Do NOT give a direct definition or explicit explanation. Instead, act as a guide.
 
-    **Instructions for your response:**
-    1.  Refer strictly to the provided "Book Context" and "Selected Passage."
-    2.  Your response must be **1-2 sentences long**, maximum 3 if absolutely necessary for clarity, but aim for shorter.
-    3.  Use simple, accessible language. Avoid jargon unless it's explicitly from the provided text.
-    4.  Guide the user towards understanding by:
-        * Drawing attention to related ideas or phrases *within the "Book Context."*
-        * Posing 1-2 concise, thought-provoking questions about the "Selected Passage" or its connection to the surrounding text.
-        * Suggesting *what* the user might consider or look for to deepen their understanding.
-    5.  Do NOT directly define the term or concept in the "Selected Passage."
-    6.  If the provided "Book Context" and "Selected Passage" genuinely lack sufficient information to provide a guiding explanation, state: "This passage requires more context from the book for a guiding explanation."
-
+    Help me understand the following passage from the book with the given context:
     ---
     **Book Title:** "{book_title}"
     **Book Context (relevant surrounding text for depth):**
@@ -169,6 +157,114 @@ def explain_text():
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         return jsonify({"error": f"An internal server error occurred: {e}"}), 500
+    
+
+@app.route('/chat', methods=['POST'])
+def chat_with_book():
+    if request.method == 'OPTIONS': # Handle CORS preflight
+        response = jsonify({'message': 'CORS preflight successful'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        return response
+
+    data = request.json
+    user_query = data.get('user_query')
+    book_title = data.get('book_title', 'Untitled Book')
+    book_chunks = data.get('book_chunks', []) # All chunks of the current book
+    
+    if not user_query:
+        return jsonify({"error": "No query provided for chat."}), 400
+    
+    if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
+        return jsonify({"error": "Gemini API Key is not configured on the server."}), 500
+
+    # Step 1: Retrieve relevant chunks (scoring-based RAG, similar to /explain)
+    cleaned_query_terms = clean_query(user_query)
+
+    context = ""
+    if cleaned_query_terms: # Only get context if query is meaningful
+        scored_chunks = []
+        for chunk in book_chunks:
+            score = 0
+            lower_case_chunk = chunk.lower()
+            for term in cleaned_query_terms:
+                if term in lower_case_chunk:
+                    score += 1
+            if score > 0:
+                scored_chunks.append({"chunk": chunk, "score": score})
+        
+        # Sort by score in descending order and select top 5 chunks
+        top_relevant_chunks = sorted(scored_chunks, key=lambda x: x["score"], reverse=True)[:5]
+        context = "\n\n".join([item["chunk"] for item in top_relevant_chunks])
+    
+    if not context:
+        context = "No highly relevant text found in the book for this query. The answer might be general knowledge or outside the book's scope."
+
+
+    # Step 2: Construct the prompt for the general chatbot
+    prompt = f"""
+    You are a helpful reading assistant. Your primary role is to answer questions based on the content of the book provided.
+
+    **Instructions:**
+    1.  Answer the user's question directly and concisely, using the provided "Book Context."
+    2.  If the answer is NOT explicitly present in the "Book Context," state that you cannot answer based on the provided information. Do NOT make up information.
+    3.  Keep your response to a maximum of 3-4 sentences.
+    4.  Maintain a friendly and informative tone.
+
+    ---
+    **Book Title:** "{book_title}"
+    **Book Context (relevant sections for your answer):**
+    """
+    {context}
+    """
+
+    **User Question:** {user_query}
+
+    ---
+    **Response:**
+    """
+
+    try:
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": prompt}]}]
+        }
+        
+        response = requests.post(f"{GEMINI_API_URL}?key={GEMINI_API_KEY}", headers=headers, json=payload)
+        response.raise_for_status()
+        gemini_result = response.json()
+        
+        bot_response_text = "Sorry, I couldn't get a response from the AI. Please try again."
+        raw_ai_response = ""
+
+        if gemini_result.get('candidates') and len(gemini_result['candidates']) > 0 and \
+           gemini_result['candidates'][0].get('content') and \
+           gemini_result['candidates'][0]['content'].get('parts') and \
+           len(gemini_result['candidates'][0]['content']['parts']) > 0:
+            raw_ai_response = gemini_result['candidates'][0]['content']['parts'][0]['text']
+
+        # Look for the "Response:" marker and extract content after it
+        marker = "Response:\n"
+        marker_index = raw_ai_response.find(marker)
+
+        if marker_index != -1:
+            bot_response_text = raw_ai_response[marker_index + len(marker):].strip()
+        else:
+            print("Warning: Chatbot response marker not found. Using raw AI response.")
+            bot_response_text = raw_ai_response.strip() # Fallback
+
+        if not bot_response_text:
+            bot_response_text = "The AI generated an empty response for your chat query. Please try again."
+
+        return jsonify({"bot_response_text": bot_response_text}), 200
+
+    except requests.exceptions.RequestException as e:
+        print(f"API request failed for chat: {e}")
+        return jsonify({"error": f"Failed to connect to AI service for chat: {e}"}), 500
+    except Exception as e:
+        print(f"An unexpected error occurred in chat endpoint: {e}")
+        return jsonify({"error": f"An internal server error occurred for chat: {e}"}), 500
 
 if __name__ == '__main__':
     # Explanation server runs on port 5000
