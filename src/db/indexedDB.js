@@ -1,12 +1,13 @@
 const DB_NAME = 'ReadingAppDB';
-const DB_VERSION = 1;
-const STORE_BOOKS = 'books'; // Object store name for books
+const DB_VERSION = 2; // Increment version to add new store
+const STORE_BOOKS = 'books';
+const STORE_SETTINGS = 'settings'; // New store for settings
 
 let db = null; // Variable to hold the IndexedDB instance
 
 /**
  * Initializes the IndexedDB database.
- * Creates the 'books' object store if it doesn't exist.
+ * Creates the 'books' and 'settings' object stores if they don't exist.
  * @returns {Promise<IDBDatabase>} A promise that resolves with the database instance.
  */
 export const initDb = () => {
@@ -29,10 +30,15 @@ export const initDb = () => {
         // This event is fired when the database needs to be upgraded (e.g., first time opening, or version change).
         request.onupgradeneeded = (event) => {
             const dbInstance = event.target.result;
-            // Create the 'books' object store if it doesn't already exist.
+            
+            // Create books store
             if (!dbInstance.objectStoreNames.contains(STORE_BOOKS)) {
                 dbInstance.createObjectStore(STORE_BOOKS, { keyPath: 'id' });
-                // No indexes needed for basic CRUD by ID, but could add for title search etc.
+            }
+            
+            // Create settings store
+            if (!dbInstance.objectStoreNames.contains(STORE_SETTINGS)) {
+                dbInstance.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
             }
         };
 
@@ -290,6 +296,82 @@ export const getBookContentChunks = async (bookId) => {
         };
         request.onerror = (event) => {
             console.error(`Error retrieving content chunks for book ${bookId}:`, event.target.error);
+            reject(event.target.error);
+        };
+    });
+};
+
+/**
+ * Saves the Gemini API key to the settings store.
+ * @param {string} apiKey - The Gemini API key to store.
+ * @returns {Promise<void>} A promise that resolves when the API key is saved.
+ */
+export const saveGeminiApiKey = async (apiKey) => {
+    const dbInstance = await initDb();
+    return new Promise((resolve, reject) => {
+        const transaction = dbInstance.transaction([STORE_SETTINGS], 'readwrite');
+        const store = transaction.objectStore(STORE_SETTINGS);
+        
+        const settingObject = {
+            key: 'gemini_api_key',
+            value: apiKey,
+            dateStored: new Date()
+        };
+        
+        const request = store.put(settingObject);
+        
+        request.onsuccess = () => {
+            console.log('Gemini API key saved successfully');
+            resolve();
+        };
+        request.onerror = (event) => {
+            console.error('Error saving API key:', event.target.error);
+            reject(event.target.error);
+        };
+    });
+};
+
+/**
+ * Retrieves the stored Gemini API key.
+ * @returns {Promise<string|null>} A promise that resolves with the API key or null if not found.
+ */
+export const getGeminiApiKey = async () => {
+    const dbInstance = await initDb();
+    return new Promise((resolve, reject) => {
+        const transaction = dbInstance.transaction([STORE_SETTINGS], 'readonly');
+        const store = transaction.objectStore(STORE_SETTINGS);
+        
+        const request = store.get('gemini_api_key');
+        
+        request.onsuccess = () => {
+            const result = request.result;
+            resolve(result ? result.value : null);
+        };
+        request.onerror = (event) => {
+            console.error('Error retrieving API key:', event.target.error);
+            reject(event.target.error);
+        };
+    });
+};
+
+/**
+ * Deletes the stored Gemini API key.
+ * @returns {Promise<void>} A promise that resolves when the API key is deleted.
+ */
+export const deleteGeminiApiKey = async () => {
+    const dbInstance = await initDb();
+    return new Promise((resolve, reject) => {
+        const transaction = dbInstance.transaction([STORE_SETTINGS], 'readwrite');
+        const store = transaction.objectStore(STORE_SETTINGS);
+        
+        const request = store.delete('gemini_api_key');
+        
+        request.onsuccess = () => {
+            console.log('Gemini API key deleted successfully');
+            resolve();
+        };
+        request.onerror = (event) => {
+            console.error('Error deleting API key:', event.target.error);
             reject(event.target.error);
         };
     });

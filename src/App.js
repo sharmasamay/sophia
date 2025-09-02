@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 import Library from './components/Library';
-import { initDb, addBookToDb, getBooksFromDb, getBookContentFromDb, deleteBookFromDb, updateBookProgress } from './db/indexedDB.js'; // Import the new function
+import SetupModal from './components/SetupModal';
+import FontSelector from './components/Reader/Selectors/FontSelector.js';
+import FontSizeSelector from './components/Reader/Selectors/FontSizeSelector.js';
+import ThemeSelector from './components/Reader/Selectors/ThemeSelector.js';
+import { initDb, addBookToDb, getBooksFromDb, getBookContentFromDb, deleteBookFromDb, updateBookProgress, saveGeminiApiKey, getGeminiApiKey } from './db/indexedDB.js';
 const JSZip = window.JSZip;
 
 function App() {
@@ -39,6 +43,8 @@ function App() {
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false); // Add theme dropdown state
   const [fontSize, setFontSize] = useState(16); // Add font size state
   const [isFontSizeDropdownOpen, setIsFontSizeDropdownOpen] = useState(false); // Add font size dropdown state
+  const [showSetupModal, setShowSetupModal] = useState(false);
+  const [geminiApiKey, setGeminiApiKey] = useState(null);
 
   const fileInputRef = useRef(null);
 
@@ -590,6 +596,17 @@ function App() {
   const sendChatMessage = async () => {
     if (!chatInput.trim()) return;
 
+    if (!geminiApiKey) {
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'bot',
+        content: 'AI chat is not available. Please set up your Gemini API key in settings.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+      return;
+    }
+
     const userMessage = {
       id: Date.now(),
       type: 'user',
@@ -602,18 +619,18 @@ function App() {
     setIsLoadingChat(true);
 
     try {
-      // Extract content chunks for context
       const contentChunks = bookContentChunks.map(chunk => chunk.content);
       
-      const response = await fetch('http://localhost:5000/explain', {
+      const response = await fetch('http://localhost:5000/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          selected_text: chatInput,
+          user_query: userMessage.content,
           book_title: bookTitle,
-          book_chunks: contentChunks
+          book_chunks: contentChunks,
+          api_key: geminiApiKey // Send API key to backend
         })
       });
       
@@ -622,7 +639,7 @@ function App() {
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: data.error ? `Error: ${data.error}` : (data.explanation || 'No response available.'),
+        content: data.error ? `Error: ${data.error}` : (data.bot_response_text || 'No response available.'),
         timestamp: new Date()
       };
 
@@ -654,15 +671,43 @@ function App() {
 
   useEffect(() => {
     initDb()
-      .then(() => {
+      .then(async () => {
         setIsLoadingDb(false);
         console.log("IndexedDB initialized successfully.");
+        
+        // Check if API key exists
+        try {
+          const storedApiKey = await getGeminiApiKey();
+          if (storedApiKey) {
+            setGeminiApiKey(storedApiKey);
+            console.log("Gemini API key loaded from storage");
+          } else {
+            setShowSetupModal(true);
+          }
+        } catch (error) {
+          console.error("Error loading API key:", error);
+          setShowSetupModal(true);
+        }
       })
       .catch((err) => {
         setDbError(err.message);
         setIsLoadingDb(false);
       });
   }, []);
+
+  const handleSetupComplete = async (apiKey) => {
+    try {
+      if (apiKey) {
+        await saveGeminiApiKey(apiKey);
+        setGeminiApiKey(apiKey);
+        console.log("API key saved successfully");
+      }
+      setShowSetupModal(false);
+    } catch (error) {
+      console.error("Error saving API key:", error);
+      alert("Error saving API key. Please try again.");
+    }
+  };
 
   // Function to fetch word definition from Flask API
   const fetchWordDefinition = async (word) => {
@@ -702,9 +747,12 @@ function App() {
 
   // Function to fetch text explanation from Flask API
   const fetchTextExplanation = async (selectedText) => {
+    if (!geminiApiKey) {
+      return "AI features are not available. Please set up your Gemini API key in settings.";
+    }
+    
     setIsLoadingExplanation(true);
     try {
-      // Extract content chunks for context
       const contentChunks = bookContentChunks.map(chunk => chunk.content);
       
       const response = await fetch('http://localhost:5000/explain', {
@@ -715,7 +763,8 @@ function App() {
         body: JSON.stringify({
           selected_text: selectedText,
           book_title: bookTitle,
-          book_chunks: contentChunks
+          book_chunks: contentChunks,
+          api_key: geminiApiKey // Send API key to backend
         })
       });
       
@@ -875,6 +924,10 @@ function App() {
 
   return (
     <div className="app-container">
+      {showSetupModal && (
+        <SetupModal onSetupComplete={handleSetupComplete} />
+      )}
+      
       {view === 'library' ? (
         <Library 
           onBookSelect={handleBookSelect}
@@ -905,89 +958,28 @@ function App() {
             <p className="chapter-title" id="chapterTitle">{getCurrentChapterTitle()}</p>
           </div>
           <div className="header-right">
-            <div className="font-selector">
-              <button 
-                className="font-toggle"
-                id="fontToggle"
-                onClick={toggleFontDropdown}
-              >
-                Aa
-              </button>
-              {isFontDropdownOpen && (
-                <div className="font-dropdown" id="fontDropdown">
-                  <div className="font-dropdown-header">Choose Font</div>
-                  {availableFonts.map((font) => (
-                    <div
-                      key={font.name}
-                      className={`font-option ${selectedFont === font.name ? 'selected' : ''}`}
-                      style={{ fontFamily: font.family }}
-                      onClick={() => handleFontChange(font)}
-                    >
-                      {font.name}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="font-size-selector">
-              <button 
-                className="font-size-toggle"
-                id="fontSizeToggle"
-                onClick={toggleFontSizeDropdown}
-              >
-                {fontSize}
-              </button>
-              {isFontSizeDropdownOpen && (
-                <div className="font-size-dropdown" id="fontSizeDropdown">
-                  <div className="font-size-dropdown-header">Font Size</div>
-                  {availableFontSizes.map((fontSizeOption) => (
-                    <div
-                      key={fontSizeOption.size}
-                      className={`font-size-option ${fontSize === fontSizeOption.size ? 'selected' : ''}`}
-                      onClick={() => handleFontSizeChange(fontSizeOption.size)}
-                    >
-                      <span className="font-size-label">{fontSizeOption.label}</span>
-                      <span className="font-size-value">{fontSizeOption.size}px</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            <div className="theme-selector">
-              <button 
-                className="theme-toggle"
-                id="themeToggle"
-                onClick={toggleThemeDropdown}
-              >
-                {getCurrentTheme().icon}
-              </button>
-              {isThemeDropdownOpen && (
-                <div className="theme-dropdown" id="themeDropdown">
-                  <div className="theme-dropdown-header">Choose Theme</div>
-                  {availableThemes.map((theme) => (
-                    <div
-                      key={theme.id}
-                      className={`theme-option ${selectedTheme === theme.id ? 'selected' : ''}`}
-                      onClick={() => handleThemeChange(theme)}
-                    >
-                      <div className="theme-preview">
-                        <div 
-                          className="theme-color-preview"
-                          style={{ 
-                            backgroundColor: theme.background,
-                            color: theme.text,
-                            border: `1px solid ${theme.text}20`
-                          }}
-                        >
-                          {theme.icon}
-                        </div>
-                        <span className="theme-name">{theme.name}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <FontSelector
+              availableFonts={availableFonts}
+              selectedFont={selectedFont}
+              isOpen={isFontDropdownOpen}
+              onToggle={() => setIsFontDropdownOpen(!isFontDropdownOpen)}
+              onChange={(font) => setSelectedFont(font.name)}
+            />
+            <FontSizeSelector
+              availableFontSizes={availableFontSizes}
+              selectedFontSize={fontSize}
+              isOpen={isFontSizeDropdownOpen}
+              onToggle={toggleFontSizeDropdown}
+              onChange={handleFontSizeChange}
+            />
+            <ThemeSelector
+            availableThemes={availableThemes}
+            selectedTheme={selectedTheme}
+            isOpen={isThemeDropdownOpen}
+            onToggle={toggleThemeDropdown}
+            onChange={handleThemeChange}
+            getCurrent={getCurrentTheme}
+            />
           </div>
         </div>
         <div className="pages-container">

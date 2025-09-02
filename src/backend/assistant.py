@@ -8,10 +8,8 @@ app = Flask(__name__)
 CORS(app) # Enable CORS for all routes, allowing your React app to make requests
 
 # --- Configuration ---
-# IMPORTANT: Replace "YOUR_GEMINI_API_KEY" with your actual Gemini API Key.
-# It's highly recommended to use environment variables for API keys in production.
-# For example: GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-GEMINI_API_KEY = "AIzaSyBTS69h23TZzjEFvzdcdXbDm_zTevAR7EU"
+# Default API key (fallback, but frontend should provide the key)
+DEFAULT_GEMINI_API_KEY = ""  # Remove the hardcoded key
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # --- Helper Functions (Copied from your React app's logic for consistency) ---
@@ -98,13 +96,14 @@ def explain_text():
     data = request.json
     selected_text = data.get('selected_text')
     book_title = data.get('book_title', 'Untitled Book')
-    book_chunks = data.get('book_chunks', []) # Receive book chunks from frontend
+    book_chunks = data.get('book_chunks', [])
+    api_key = data.get('api_key', DEFAULT_GEMINI_API_KEY)  # Get API key from request
     
     if not selected_text:
         return jsonify({"error": "No text selected for explanation."}), 400
     
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        return jsonify({"error": "Gemini API Key is not configured on the server."}), 500
+    if not api_key:
+        return jsonify({"error": "Gemini API Key not provided. Please set up your API key in the app settings."}), 400
 
     # Retrieve relevant context using the helper function
     context_for_explanation = get_context_for_explanation(selected_text, book_chunks, max_context_chunks=3)
@@ -136,8 +135,8 @@ def explain_text():
             "contents": [{"role": "user", "parts": [{"text": prompt}]}]
         }
         
-        # Make the API call to Gemini
-        response = requests.post(f"{GEMINI_API_URL}?key={GEMINI_API_KEY}", headers=headers, json=payload)
+        # Make the API call to Gemini using the provided API key
+        response = requests.post(f"{GEMINI_API_URL}?key={api_key}", headers=headers, json=payload)
         response.raise_for_status() # Raise an HTTPError for bad responses (4xx or 5xx)
         
         gemini_result = response.json()
@@ -171,13 +170,14 @@ def chat_with_book():
     data = request.json
     user_query = data.get('user_query')
     book_title = data.get('book_title', 'Untitled Book')
-    book_chunks = data.get('book_chunks', []) # All chunks of the current book
+    book_chunks = data.get('book_chunks', [])
+    api_key = data.get('api_key', DEFAULT_GEMINI_API_KEY)  # Get API key from request
     
     if not user_query:
         return jsonify({"error": "No query provided for chat."}), 400
     
-    if not GEMINI_API_KEY or GEMINI_API_KEY == "YOUR_GEMINI_API_KEY":
-        return jsonify({"error": "Gemini API Key is not configured on the server."}), 500
+    if not api_key:
+        return jsonify({"error": "Gemini API Key not provided. Please set up your API key in the app settings."}), 400
 
     # Step 1: Retrieve relevant chunks (scoring-based RAG, similar to /explain)
     cleaned_query_terms = clean_query(user_query)
@@ -200,7 +200,6 @@ def chat_with_book():
     
     if not context:
         context = "No highly relevant text found in the book for this query. The answer might be general knowledge or outside the book's scope."
-
 
     # Step 2: Construct the prompt for the general chatbot
     prompt = f"""
@@ -231,7 +230,8 @@ def chat_with_book():
             "contents": [{"role": "user", "parts": [{"text": prompt}]}]
         }
         
-        response = requests.post(f"{GEMINI_API_URL}?key={GEMINI_API_KEY}", headers=headers, json=payload)
+        # Make the API call to Gemini using the provided API key
+        response = requests.post(f"{GEMINI_API_URL}?key={api_key}", headers=headers, json=payload)
         response.raise_for_status()
         gemini_result = response.json()
         
