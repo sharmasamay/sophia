@@ -696,6 +696,15 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+    async function checkApiKey() {
+      const key = await getGeminiApiKey();
+      setShowSetupModal(!key);
+      if (key) setGeminiApiKey(key);
+    }
+    checkApiKey();
+  }, []);
+
   const handleSetupComplete = async (apiKey) => {
     try {
       if (apiKey) {

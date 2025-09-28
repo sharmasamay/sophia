@@ -9,7 +9,7 @@ CORS(app) # Enable CORS for all routes, allowing your React app to make requests
 
 # --- Configuration ---
 # Default API key (fallback, but frontend should provide the key)
-DEFAULT_GEMINI_API_KEY = ""  # Remove the hardcoded key
+DEFAULT_GEMINI_API_KEY = ""  
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
 # --- Helper Functions (Copied from your React app's logic for consistency) ---
@@ -59,7 +59,7 @@ def get_context_for_explanation(highlighted_text, book_chunks, max_context_chunk
     if central_chunk_index != -1:
         # Get chunks around the central chunk
         start_index = max(0, central_chunk_index - max_context_chunks)
-        end_index = min(len(book_chunks) - 1, central_chunk_index + max_context_chunks)
+        end_index = central_chunk_index
         for i in range(start_index, end_index + 1):
             context_chunks.append(book_chunks[i])
     else:
@@ -115,18 +115,16 @@ def explain_text():
     ---
     **Book Title:** "{book_title}"
     **Book Context (relevant surrounding text for depth):**
-    """
     {context_for_explanation}
-    """
-
+    ----
     **Selected Passage (the exact text the user highlighted for explanation):**
-    """
     {selected_text}
-    """
+    ----
 
-    **User's Implicit Request:** Help me understand this passage.
+    **User's Implicit Request:** Use clear but concise language and give the answer in the following format
+    What it means:
+    How it fits in:
     """
-
     try:
         headers = {
             "Content-Type": "application/json"
@@ -214,12 +212,9 @@ def chat_with_book():
     ---
     **Book Title:** "{book_title}"
     **Book Context (relevant sections for your answer):**
-    """
     {context}
-    """
 
     **User Question:** {user_query}
-
     ---
     **Response:**
     """

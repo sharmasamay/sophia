@@ -334,8 +334,8 @@ const Library = ({ onBookSelect, onNewBookUpload }) => {
     {/* Upload Section */}
     <div className="upload-section">
       <div className="upload-content">
-        <div className="upload-icon">📚</div>
-        <h2 className="upload-title">Welcome to Sophia</h2>
+        <h2 className="upload-title">Welcome to</h2>
+        <h1 className="apptitle">Sophia</h1>
         <p className="upload-text">Upload your EPUB files to start reading</p>
         <input 
           type="file" 
