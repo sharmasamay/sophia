@@ -12,8 +12,45 @@ CORS(app) # Enable CORS for all routes, allowing your React app to make requests
 DEFAULT_GEMINI_API_KEY = ""  
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
 
-# --- Helper Functions (Copied from your React app's logic for consistency) ---
-# Note: In a real backend, you might refine these or use a dedicated NLP library.
+#Dictionary
+def fetch_word_definition(word):
+    url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+    response = requests.get(url)
+
+    if response.status_code == 200:
+        data = response.json()
+        results = {
+            "word": data[0].get("word", ""),
+            "meanings": []
+        }
+
+        for meaning in data[0].get("meanings", []):
+            part_of_speech = meaning.get("partOfSpeech", "")
+            definitions = []
+            for d in meaning.get("definitions", []):
+                definitions.append({
+                    "definition": d.get("definition", ""),
+                    "example": d.get("example", "")
+                })
+            results["meanings"].append({
+                "partOfSpeech": part_of_speech,
+                "definitions": definitions
+            })
+
+        return results
+    else:
+        return {"error": f"Word '{word}' not found."}
+
+@app.route('/definition', methods=['GET'])
+def get_definition():
+    word = request.args.get('word')
+    if not word:
+        return jsonify({"error": "No word provided"}), 400
+
+    result = fetch_word_definition(word)
+    return jsonify(result)
+
+
 STOP_WORDS = {
   "a", "an", "the", "and", "but", "or", "for", "nor", "on", "at", "to", "from",
   "by", "in", "with", "of", "is", "are", "was", "were", "be", "been", "am",
@@ -264,4 +301,4 @@ def chat_with_book():
 if __name__ == '__main__':
     # Explanation server runs on port 5000
     print("Starting Explanation Server on port 5000...")
-    app.run(debug=True, port=5000, host='127.0.0.1')
+    app.run(debug=False, port=5000, host='0.0.0.0')
