@@ -622,7 +622,7 @@ function App() {
     try {
       const contentChunks = bookContentChunks.map(chunk => chunk.content);
       
-      const response = await fetch('http://localhost:5000/chat', {
+      const response = await fetch('https://sophia-7tkw.onrender.com/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -723,7 +723,7 @@ function App() {
   const fetchWordDefinition = async (word) => {
     setIsLoadingDefinition(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/definition?word=${encodeURIComponent(word)}`);
+      const response = await fetch(`https://sophia-7tkw.onrender.com/definition?word=${encodeURIComponent(word)}`);
       const data = await response.json();
       
       if (data.error) {
@@ -765,7 +765,7 @@ function App() {
     try {
       const contentChunks = bookContentChunks.map(chunk => chunk.content);
       
-      const response = await fetch('http://localhost:5000/explain', {
+      const response = await fetch('https://sophia-7tkw.onrender.com/explain', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
