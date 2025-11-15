@@ -1,0 +1,89 @@
+.bubble-option {
+  background-color: rgba(102, 126, 234, 0.1); /* Light blue background */
+  color: #667eea; /* Blue text */
+  border: 1px solid rgba(102, 126, 234, 0.5); /* Blue border */
+  border-radius: 20px; /* Rounded edges for the bubble effect */
+  padding: 8px 16px; /* Padding inside the bubble */
+  font-size: 0.9rem; /* Font size */
+  font-weight: 600; /* Bold text */
+  cursor: pointer; /* Pointer cursor on hover */
+  transition: all 0.3s ease; /* Smooth hover effect */
+}
+
+.bubble-option:hover {
+  background-color: rgba(102, 126, 234, 0.2); /* Darker blue on hover */
+  border-color: rgba(102, 126, 234, 0.8); /* Darker border on hover */
+}
+
+.bubble-option:active {
+  background-color: rgba(102, 126, 234, 0.3); /* Even darker blue when clicked */
+  border-color: rgba(102, 126, 234, 1); /* Solid border when clicked */
+}
+
+.bubble-option.selected {
+  background-color: rgba(3, 48, 247, 0.5); /* Darker blue background */
+  color: white; /* White text */
+  border-color: rgba(102, 126, 234, 1); /* Solid border */
+}
+
+.tab-button {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  padding: 10px 20px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.3s ease, border-bottom 0.3s ease;
+}
+
+.tab-button.active {
+  color: #667eea;
+  border-bottom: 2px solid #667eea;
+}
+
+.tab-button:hover {
+  color: #667eea;
+}
+
+.forward-back-button {
+  background-color: #667eea; /* Blue background */
+  color: #fff; /* White text */
+  border: none; /* Remove border */
+  border-radius: 50%; /* Make the button round */
+  width: 40px; /* Set width */
+  height: 40px; /* Set height */
+  font-size: 1.2rem; /* Font size for the arrow */
+  font-weight: bold; /* Bold arrow */
+  cursor: pointer; /* Pointer cursor on hover */
+  display: flex; /* Center the arrow */
+  align-items: center; /* Center vertically */
+  justify-content: center; /* Center horizontally */
+  transition: background-color 0.3s ease; /* Smooth hover effect */
+}
+
+.forward-back-button:hover {
+  background-color: #5561c0; /* Darker blue on hover */
+}
+
+.forward-back-button:active {
+  background-color: #3f4a99; /* Even darker blue when clicked */
+}
+
+.huge-textbox {
+  width: 90%; /* Full width with some margin */
+  height: 200px; /* Height of the textbox */
+  padding: 12px; /* Padding inside the textbox */
+  font-size: 1rem; /* Font size for the text */
+  border: 1px solid rgba(102, 126, 234, 0.5); /* Border color */
+  border-radius: 8px; /* Rounded corners */
+  resize: none; /* Disable resizing */
+  outline: none; /* Remove focus outline */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Add a subtle shadow */
+}
+
+.huge-textbox:focus {
+  border-color: rgba(102, 126, 234, 1); /* Highlight border on focus */
+  box-shadow: 0 0 4px rgba(102, 126, 234, 0.5); /* Add glow effect on focus */
+}

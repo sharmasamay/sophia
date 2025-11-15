@@ -46,6 +46,9 @@ function App() {
   const [isFontSizeDropdownOpen, setIsFontSizeDropdownOpen] = useState(false); // Add font size dropdown state
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState(null);
+  const [startingPoint, setStartingPoint] = useState('');
+  const [familiarityLevel, setFamiliarityLevel] = useState('');
+  const [selectedPrompt, setSelectedPrompt] = useState('');
 
   const fileInputRef = useRef(null);
 
@@ -451,57 +454,6 @@ function App() {
     return 'Unknown Chapter';
   };
 
-  const getLeftPageChapterTitle = () => {
-    const currentChapter = chapters.find(
-      (chapter) =>
-        currentPageIndex >= chapter.startPage && currentPageIndex <= chapter.endPage
-    );
-    return currentChapter ? currentChapter.title : 'Unknown Chapter';
-  };
-
-  // File handling
-  const handleFile = async (event) => {
-    const file = event.target.files[0];
-    if (!file || !file.name.endsWith('.epub')) {
-      alert('Please select a valid EPUB file');
-      return;
-    }
-
-    try {
-      const zip = new JSZip();
-      const contents = await zip.loadAsync(file);
-      
-      const bookTitleText = file.name.replace('.epub', '');
-      setBookTitle(bookTitleText);
-      
-      // Parse EPUB content and structure
-      const { chapters: parsedChapters, toc: parsedToc, bookContent: newBookContent, bookContentChunks: newBookContentChunks } = await parseEpubContent(contents);
-      
-      setBookContent(newBookContent);
-      setBookContentChunks(newBookContentChunks); // Set the chunks
-      setChapters(parsedChapters);
-      setTableOfContents(parsedToc);
-      setCurrentPageIndex(0);
-      
-      // Hide upload overlay and show reader
-      setShowUploadOverlay(false);
-      setShowReader(true);
-      setShowPanelToggle(true);
-      setShowTocToggle(true);
-
-      // Update book info in panel
-      setBookInfo(`
-        Title: ${bookTitleText}
-        Chapters: ${parsedChapters.length}
-        Pages: ${Math.ceil(newBookContent.length / 2)}
-        Total Chunks: ${newBookContentChunks.length}
-        File Size: ${(file.size / 1024).toFixed(1)} KB
-      `);
-
-    } catch (error) {
-      alert('Error reading EPUB file: ' + error.message);
-    }
-  };
 
   const updateNavigation = () => {
     if (isMobile) {
@@ -755,7 +707,18 @@ function App() {
     }
   };
 
-  // Function to fetch text explanation from Flask API
+  const handleStartingPointChange = (newStartingPoint) => {
+    console.log('Starting Point:', newStartingPoint);
+  };
+  const handleFamiliarityLevelChange = (newFamiliarityLevel) => {
+    console.log('Familiarity Level:', newFamiliarityLevel);
+  };
+  const handlePromptChange = (newPrompt) => {
+    console.log('Selected Prompt:', newPrompt);
+  };
+
+
+  //Function to fetch text explanation from Flask API
   const fetchTextExplanation = async (selectedText) => {
     if (!geminiApiKey) {
       return "AI features are not available. Please set up your Gemini API key in settings.";
@@ -774,7 +737,11 @@ function App() {
           selected_text: selectedText,
           book_title: bookTitle,
           book_chunks: contentChunks,
-          api_key: geminiApiKey // Send API key to backend
+          api_key: geminiApiKey,
+          starting_point: startingPoint,
+          familiarity: familiarityLevel,
+          prompt: selectedPrompt,
+
         })
       });
       
@@ -793,16 +760,13 @@ function App() {
     }
   };
 
-  // Text selection handling
   useEffect(() => {
     const handleMouseUp = async () => {
       const selection = window.getSelection();
       const selectedTextContent = selection.toString().trim();
-      
+
       if (selectedTextContent) {
         setSelectedText(selectedTextContent);
-        
-        // Check if it's a single word (no spaces)
         const words = selectedTextContent.split(/\s+/);
         if (words.length === 1 && words[0].length > 0) {
           // Single word - fetch definition
@@ -812,45 +776,32 @@ function App() {
           setTextExplanation('Select multiple words to see an explanation'); // Reset explanation
           const definition = await fetchWordDefinition(cleanWord);
           setWordDefinition(definition);
-          
-          // Scroll to the word definition section if panel is open
-          if (isPanelOpen) {
-            setTimeout(() => {
+          if (isPanelOpen===false){
+            setIsPanelOpen(true);
+          }
+          setTimeout(() => {
               const wordDefElement = document.getElementById('wordDefinition');
               if (wordDefElement) {
                 wordDefElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
               }
             }, 100);
-          }
-        } else if (words.length > 1) {
-          // Multiple words - fetch explanation
-          setSelectedWord(''); // Reset single word state
-          setWordDefinition('Select a single word to see its definition'); // Reset definition
-          setTextExplanation('Loading explanation...');
-          const explanation = await fetchTextExplanation(selectedTextContent);
-          setTextExplanation(explanation);
-          
-          // Scroll to the text explanation section if panel is open
-          if (isPanelOpen) {
-            setTimeout(() => {
-              const textExplElement = document.getElementById('textExplanation');
-              if (textExplElement) {
-                textExplElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              }
-            }, 100);
-          }
-        } else {
-          // Reset both states if no valid selection
-          setSelectedWord('');
-          setWordDefinition('Select a single word to see its definition');
-          setTextExplanation('Select multiple words to see an explanation');
         }
+        
       }
+        // else if (words.length > 1) {
+        //   // Multiple words - fetch explanation
+        //   setSelectedWord(''); // Reset single word state
+        //   setWordDefinition('Select a single word to see its definition');
+         
+      // else {
+      //   setSelectedText('Select text from the book to see it here'); // Reset if no text is selected
+      //   setIsPanelOpen(false); // Optionally close the panel when no text is selected
+      // }
     };
 
     document.addEventListener('mouseup', handleMouseUp);
     return () => document.removeEventListener('mouseup', handleMouseUp);
-  }, [bookContentChunks, bookTitle, isPanelOpen]); // Add isPanelOpen to dependencies
+  }, []);
 
   // Close panels when clicking outside
   useEffect(() => {
@@ -862,9 +813,9 @@ function App() {
       const chatPanel = document.getElementById('chatPanel');
       const chatToggle = document.getElementById('chatToggle');
       
-      if (isPanelOpen && panel && toggle && !panel.contains(event.target) && !toggle.contains(event.target)) {
-        togglePanel();
-      }
+      // if (isPanelOpen && panel && toggle && !panel.contains(event.target) && !toggle.contains(event.target)) {
+      //   togglePanel();
+      // }
       
       if (isTocOpen && tocPanel && tocToggle && !tocPanel.contains(event.target) && !tocToggle.contains(event.target)) {
         toggleToc();
@@ -1089,82 +1040,24 @@ function App() {
       {/* Sliding Panel */}
       <SlidingPanel
       isOpen={isPanelOpen}
-      bookInfo={bookInfo}
       selectedText={selectedText}
       selectedWord={selectedWord}
       wordDefinition={wordDefinition}
       isLoadingDefinition={isLoadingDefinition}
       textExplanation={textExplanation}
       isLoadingExplanation={isLoadingExplanation}
+      chatMessages={chatMessages}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      sendChatMessage={sendChatMessage}
+      clearChat={clearChat}
+      isLoadingChat={isLoadingChat}
+      onStartingPointChange={setStartingPoint} 
+      onFamiliarityLevelChange={setFamiliarityLevel}
+      onPromptChange = {setSelectedPrompt}
+      fetchTextExplanation={fetchTextExplanation}
+      setTextExplanation={setTextExplanation}
       />
-
-      {/* Chat Toggle Button */}
-      <button 
-        className={`chat-toggle ${showTocToggle ? 'visible' : ''} ${isChatOpen ? 'chat-open' : ''}`} 
-        id="chatToggle" 
-        onClick={toggleChat}
-      >
-        💬
-      </button>
-
-      {/* Chat Panel */}
-      <div className={`chat-panel ${isChatOpen ? 'open' : ''}`} id="chatPanel">
-        <div className="panel-header">
-          Chat with Sophia
-          <button className="clear-chat-btn" onClick={clearChat}>Clear</button>
-        </div>
-        <div className="chat-content">
-          <div className="chat-messages">
-            {chatMessages.length === 0 ? (
-              <div className="chat-welcome">
-                <p>👋 Hi! I'm Sophia, your reading assistant.</p>
-                <p>Ask me questions about the book you're reading!</p>
-              </div>
-            ) : (
-              chatMessages.map((message) => (
-                <div 
-                  key={message.id} 
-                  className={`chat-message ${message.type === 'user' ? 'user-message' : 'bot-message'}`}
-                >
-                  <div className="message-content">
-                    {message.content}
-                  </div>
-                  <div className="message-timestamp">
-                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-              ))
-            )}
-            {isLoadingChat && (
-              <div className="chat-message bot-message">
-                <div className="message-content">
-                  <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                    <div className="spinner" style={{width: '16px', height: '16px'}}></div>
-                    Thinking...
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="chat-input-container">
-            <textarea
-              className="chat-input"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              onKeyPress={handleChatKeyPress}
-              placeholder="Ask me about the book..."
-              rows="2"
-            />
-            <button 
-              className="chat-send-btn" 
-              onClick={sendChatMessage}
-              disabled={!chatInput.trim() || isLoadingChat}
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import requests
-import os
 
 app = Flask(__name__)
 CORS(app) # Enable CORS for all routes, allowing your React app to make requests
@@ -134,7 +133,10 @@ def explain_text():
     selected_text = data.get('selected_text')
     book_title = data.get('book_title', 'Untitled Book')
     book_chunks = data.get('book_chunks', [])
-    api_key = data.get('api_key', DEFAULT_GEMINI_API_KEY)  # Get API key from request
+    api_key = data.get('api_key', DEFAULT_GEMINI_API_KEY)
+    starting_point = data.get('starting_point')
+    familiarity_level = data.get('familiarity')
+    prompt_selection = data.get('prompt')
     
     if not selected_text:
         return jsonify({"error": "No text selected for explanation."}), 400
@@ -157,10 +159,12 @@ def explain_text():
     **Selected Passage (the exact text the user highlighted for explanation):**
     {selected_text}
     ----
-
-    **User's Implicit Request:** Use clear but concise language and give the answer in the following format
-    What it means:
-    How it fits in:
+    ** User's understanding of the selected text(Optional): {starting_point}**
+    ----
+    **User's familiarity level with the content: {familiarity_level}**
+    ----
+    **User's Request:** Keeping all this in mind, use clear and concise language fullfil the user's request below:
+    {prompt_selection}
     """
     try:
         headers = {
@@ -182,6 +186,7 @@ def explain_text():
             gemini_result['candidates'][0]['content'].get('parts') and \
             len(gemini_result['candidates'][0]['content']['parts']) > 0:
             explanation = gemini_result['candidates'][0]['content']['parts'][0]['text']
+            print(explanation)
         
         return jsonify({"explanation": explanation}), 200
 
@@ -255,7 +260,6 @@ def chat_with_book():
     ---
     **Response:**
     """
-
     try:
         headers = {"Content-Type": "application/json"}
         payload = {

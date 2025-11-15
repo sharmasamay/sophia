@@ -831,6 +831,7 @@ body {
   flex-direction: column;
   height: 100%;
   padding: 0 20px 20px 20px;
+  overflow: hidden;
 }
 
 .chat-messages {
@@ -919,6 +920,7 @@ body {
 
 .chat-input-container {
   display: flex;
+  flex-shrink: 0;
   gap: 10px;
   align-items: flex-end;
   padding-top: 10px;
@@ -1166,3 +1168,9 @@ body {
     font-size: 12px;
   }
 }
+.selected-text {
+  text-decoration: underline;
+  text-decoration-color: rgba(102, 126, 234, 0.8); /* Optional: Add color */
+  text-decoration-thickness: 2px; /* Optional: Adjust thickness */
+}
+
