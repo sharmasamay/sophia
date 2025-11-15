@@ -764,7 +764,9 @@ function App() {
     const handleMouseUp = async () => {
       const selection = window.getSelection();
       const selectedTextContent = selection.toString().trim();
-
+      if(isPanelOpen===false){
+          setIsPanelOpen(true);
+        }
       if (selectedTextContent) {
         setSelectedText(selectedTextContent);
         const words = selectedTextContent.split(/\s+/);
@@ -776,9 +778,6 @@ function App() {
           setTextExplanation('Select multiple words to see an explanation'); // Reset explanation
           const definition = await fetchWordDefinition(cleanWord);
           setWordDefinition(definition);
-          if (isPanelOpen===false){
-            setIsPanelOpen(true);
-          }
           setTimeout(() => {
               const wordDefElement = document.getElementById('wordDefinition');
               if (wordDefElement) {
