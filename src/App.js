@@ -764,7 +764,7 @@ function App() {
     const handleMouseUp = async () => {
       const selection = window.getSelection();
       const selectedTextContent = selection.toString().trim();
-      if(isPanelOpen===false){
+      if(selectedTextContent!="Select text from the book to see it here" && isPanelOpen===false){
           setIsPanelOpen(true);
         }
       if (selectedTextContent) {
